@@ -109,7 +109,7 @@ object BoostConfigStore {
         val type = object : TypeToken<MutableList<com.allmightgamebooster.gusdev.model.SessionRecord>>() {}.type
         val list: MutableList<com.allmightgamebooster.gusdev.model.SessionRecord> = gson.fromJson(json, type)
         list.add(0, record)
-        if (list.size > 200) list.removeRange(200, list.size)
+        if (list.size > 200) list.subList(200, list.size).clear()
         prefs(ctx).edit().putString(KEY_SESSIONS, gson.toJson(list)).apply()
     }
 

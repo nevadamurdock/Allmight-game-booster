@@ -33,7 +33,7 @@ class ModuleMain : XposedModule() {
 
     override fun onPackageLoaded(param: PackageLoadedParam) {
         val pkg = param.packageName
-        log(Log.INFO, TAG, "Package loaded: $pkg (uid=${param.uid})")
+        log(Log.INFO, TAG, "Package loaded: $pkg")
 
         applyRootHideHooks(param)
         applyBoostHooks(param)

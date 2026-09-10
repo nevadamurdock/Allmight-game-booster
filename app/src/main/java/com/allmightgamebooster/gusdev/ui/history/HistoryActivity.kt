@@ -157,7 +157,7 @@ class HistoryActivity : AppCompatActivity() {
             setDrawCircles(false)
             lineWidth = 1.5f
             mode = LineDataSet.Mode.CUBIC_BEZIER
-            axisDependency = com.github.mikephil.charting.components.YAxis.YAxisDependency.LEFT
+            axisDependency = com.github.mikephil.charting.components.YAxis.AxisDependency.LEFT
         }
 
         chart.data = LineData(tempDataSet, fpsDataSet)

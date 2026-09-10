@@ -45,7 +45,7 @@
     <style name="TextAppearance.ScreenTitle" parent="">
         <item name="android:textColor">@color/paper_05</item>
         <item name="android:textSize">22sp</item>
-        <item name="android:textStyle">medium</item>
+        <item name="android:textStyle">bold</item>
     </style>
 
     <style name="Widget.AllMight.Button" parent="Widget.MaterialComponents.Button">
@@ -61,7 +61,7 @@
         <item name="checkedIconVisible">false</item>
     </style>
 
-    <style name="Widget.AllMight.Switch">
+    <style name="Widget.AllMight.Switch" parent="">
         <item name="thumbTint">@color/copper_signal</item>
         <item name="trackTint">@color/graphite_50</item>
     </style>
@@ -73,7 +73,7 @@
         <item name="strokeWidth">0dp</item>
     </style>
 
-    <style name="Widget.AllMight.RecyclerView">
+    <style name="Widget.AllMight.RecyclerView" parent="">
         <item name="android:background">@color/graphite_90</item>
         <item name="android:clipToPadding">false</item>
         <item name="android:paddingTop">8dp</item>
