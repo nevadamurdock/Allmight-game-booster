@@ -77,6 +77,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
     private fun isModuleActive(): Boolean {
         return try {
             Class.forName("io.github.libxposed.api.XposedModule")
+            true
         } catch (_: Throwable) {
             false
         }
