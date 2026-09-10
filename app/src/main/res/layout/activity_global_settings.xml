@@ -18,148 +18,243 @@
             android:orientation="vertical"
             android:padding="@dimen/spacing_md">
 
-            <!-- Battery threshold -->
+            <!-- Section: Umum -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="UMUM"
+                android:textColor="@color/steel_40"
+                android:textSize="11sp"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="@dimen/spacing_sm" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@color/graphite_70"
-                android:orientation="vertical"
-                android:padding="@dimen/panel_padding">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/settings_battery_threshold"
-                    android:textColor="@color/paper_05"
-                    android:textSize="@dimen/text_body" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Turunkan boost otomatis saat baterai di bawah batas"
-                    android:textColor="@color/steel_40"
-                    android:textSize="@dimen/text_small"
-                    android:layout_marginTop="@dimen/spacing_xs" />
-                <SeekBar
-                    android:id="@+id/seekBatteryThreshold"
+                android:orientation="vertical">
+
+                <!-- Battery threshold -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spacing_sm"
-                    android:max="50"
-                    android:progress="20"
-                    android:progressTint="@color/copper_signal"
-                    android:thumbTint="@color/copper_signal" />
-                <TextView
-                    android:id="@+id/tvBatteryThreshold"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="monospace"
-                    android:textColor="@color/copper_signal"
-                    android:textSize="@dimen/text_body"
-                    android:layout_gravity="end" />
-            </LinearLayout>
+                    android:orientation="vertical"
+                    android:padding="@dimen/panel_padding">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Auto revert baterai"
+                            android:textColor="@color/paper_05"
+                            android:textSize="@dimen/text_body" />
+                        <TextView
+                            android:id="@+id/tvBatteryThreshold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:textColor="@color/copper_signal"
+                            android:textSize="@dimen/text_body" />
+                    </LinearLayout>
+                    <SeekBar
+                        android:id="@+id/seekBatteryThreshold"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:max="50"
+                        android:progress="10"
+                        android:progressTint="@color/copper_signal"
+                        android:thumbTint="@color/copper_signal" />
+                </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/spacing_md" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/graphite_50" />
 
-            <!-- Default preset -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/graphite_70"
-                android:orientation="vertical"
-                android:padding="@dimen/panel_padding">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/settings_default_preset"
-                    android:textColor="@color/paper_05"
-                    android:textSize="@dimen/text_body" />
-                <RadioGroup
-                    android:id="@+id/rgDefaultPreset"
+                <!-- Default preset -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spacing_sm">
-                    <RadioButton
-                        android:id="@+id/rbPerformance"
-                        android:layout_width="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/panel_padding">
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/preset_performance"
-                        android:textColor="@color/paper_05"
-                        android:buttonTint="@color/copper_signal" />
-                    <RadioButton
-                        android:id="@+id/rbBalanced"
-                        android:layout_width="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Preset default app baru"
+                            android:textColor="@color/paper_05"
+                            android:textSize="@dimen/text_body" />
+                    </LinearLayout>
+                    <RadioGroup
+                        android:id="@+id/rgDefaultPreset"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/preset_balanced"
-                        android:textColor="@color/paper_05"
-                        android:buttonTint="@color/copper_signal" />
-                    <RadioButton
-                        android:id="@+id/rbBatterySaver"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/preset_battery_saver"
-                        android:textColor="@color/paper_05"
-                        android:buttonTint="@color/copper_signal" />
-                </RadioGroup>
+                        android:layout_marginTop="@dimen/spacing_sm">
+                        <RadioButton
+                            android:id="@+id/rbPerformance"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/preset_performance"
+                            android:textColor="@color/paper_05"
+                            android:buttonTint="@color/copper_signal" />
+                        <RadioButton
+                            android:id="@+id/rbBalanced"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/preset_balanced"
+                            android:textColor="@color/paper_05"
+                            android:buttonTint="@color/copper_signal" />
+                        <RadioButton
+                            android:id="@+id/rbBatterySaver"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/preset_battery_saver"
+                            android:textColor="@color/paper_05"
+                            android:buttonTint="@color/copper_signal" />
+                    </RadioGroup>
+                </LinearLayout>
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/spacing_md" />
+                android:layout_height="@dimen/spacing_lg" />
 
-            <!-- About -->
+            <!-- Section: Izin & Info -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="IZIN & INFO"
+                android:textColor="@color/steel_40"
+                android:textSize="11sp"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="@dimen/spacing_sm" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@color/graphite_70"
-                android:orientation="vertical"
-                android:padding="@dimen/panel_padding">
-                <TextView
-                    android:layout_width="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Kelola izin -->
+                <LinearLayout
+                    android:id="@+id/btnManagePermissions"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/settings_about"
-                    android:textColor="@color/paper_05"
-                    android:textSize="@dimen/text_body" />
-                <TextView
-                    android:id="@+id/tvVersion"
-                    android:layout_width="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="@dimen/panel_padding"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Kelola izin"
+                        android:textColor="@color/paper_05"
+                        android:textSize="@dimen/text_body" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="›"
+                        android:textColor="@color/steel_40"
+                        android:textSize="18sp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/graphite_50" />
+
+                <!-- Module status -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/steel_40"
-                    android:textSize="@dimen/text_small"
-                    android:layout_marginTop="@dimen/spacing_xs" />
-                <TextView
-                    android:id="@+id/tvModuleStatus"
-                    android:layout_width="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="@dimen/panel_padding">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Status modul"
+                        android:textColor="@color/paper_05"
+                        android:textSize="@dimen/text_body" />
+                    <TextView
+                        android:id="@+id/tvModuleStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:textColor="@color/steel_40"
+                        android:textSize="@dimen/text_small" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/graphite_50" />
+
+                <!-- Version -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/steel_40"
-                    android:textSize="@dimen/text_small" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="@dimen/panel_padding">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Versi modul"
+                        android:textColor="@color/paper_05"
+                        android:textSize="@dimen/text_body" />
+                    <TextView
+                        android:id="@+id/tvVersion"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:textColor="@color/steel_40"
+                        android:textSize="@dimen/text_small" />
+                </LinearLayout>
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/spacing_md" />
+                android:layout_height="@dimen/spacing_lg" />
 
             <!-- About Dev -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DEVELOPER"
+                android:textColor="@color/steel_40"
+                android:textSize="11sp"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="@dimen/spacing_sm" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@color/graphite_70"
                 android:orientation="vertical"
                 android:padding="@dimen/panel_padding">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="About Developer"
-                    android:textColor="@color/copper_signal"
-                    android:textSize="@dimen/text_body"
-                    android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="AgusDEV"
-                    android:textColor="@color/paper_05"
+                    android:textColor="@color/copper_signal"
                     android:textSize="@dimen/text_body"
-                    android:layout_marginTop="@dimen/spacing_sm" />
+                    android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

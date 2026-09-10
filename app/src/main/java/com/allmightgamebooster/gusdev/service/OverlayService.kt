@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.LinearLayout
 import android.widget.TextView
 import com.allmightgamebooster.gusdev.R
 import com.allmightgamebooster.gusdev.data.BoostConfigStore
@@ -18,7 +19,9 @@ class OverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
-    private var isCollapsed = false
+    private var expandedView: LinearLayout? = null
+    private var dotView: View? = null
+    private var isExpanded = true
     private var monitorThread: Thread? = null
     private var isRunning = false
 
@@ -31,9 +34,7 @@ class OverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (overlayView == null) {
-            createOverlay()
-        }
+        if (overlayView == null) createOverlay()
         startMonitoring()
         return START_STICKY
     }
@@ -41,6 +42,8 @@ class OverlayService : Service() {
     private fun createOverlay() {
         val inflater = LayoutInflater.from(this)
         overlayView = inflater.inflate(R.layout.overlay_monitor, null)
+        expandedView = overlayView?.findViewById(R.id.overlayExpanded)
+        dotView = overlayView?.findViewById(R.id.overlayDot)
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -51,6 +54,7 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
+            val pkg = BoostConfigStore.getActiveApp(this@OverlayService) ?: ""
             val (savedX, savedY) = BoostConfigStore.getOverlayPosition(this@OverlayService)
             x = if (savedX >= 0) savedX else 100
             y = if (savedY >= 0) savedY else 100
@@ -84,11 +88,10 @@ class OverlayService : Service() {
                     }
                     MotionEvent.ACTION_UP -> {
                         if (!moved) {
-                            toggleCollapse()
+                            toggleExpandCollapse()
                         } else {
                             BoostConfigStore.setOverlayPosition(
-                                this@OverlayService,
-                                params.x, params.y
+                                this@OverlayService, params.x, params.y
                             )
                         }
                         return true
@@ -100,30 +103,17 @@ class OverlayService : Service() {
 
         try {
             windowManager.addView(overlayView, params)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (_: Exception) {}
     }
 
-    private fun toggleCollapse() {
-        isCollapsed = !isCollapsed
-        overlayView?.let { view ->
-            val children = when (view) {
-                is android.widget.LinearLayout -> {
-                    (0 until view.childCount).map { view.getChildAt(it) }
-                }
-                else -> emptyList()
-            }
-            children.forEach { child ->
-                child.visibility = if (isCollapsed) View.GONE else View.VISIBLE
-            }
-            if (isCollapsed) {
-                view.setMinimumWidth(8)
-                view.setMinimumHeight(8)
-            } else {
-                view.setMinimumWidth(WindowManager.LayoutParams.WRAP_CONTENT)
-                view.setMinimumHeight(WindowManager.LayoutParams.WRAP_CONTENT)
-            }
+    private fun toggleExpandCollapse() {
+        isExpanded = !isExpanded
+        if (isExpanded) {
+            expandedView?.visibility = View.VISIBLE
+            dotView?.visibility = View.GONE
+        } else {
+            expandedView?.visibility = View.GONE
+            dotView?.visibility = View.VISIBLE
         }
     }
 
@@ -137,22 +127,21 @@ class OverlayService : Service() {
                     val maxFreqGhz = freqList.maxByOrNull { it.second }?.let {
                         String.format("%.1f", it.second / 1000000.0)
                     } ?: "N/A"
+                    val fps = MonitorService.currentFps
 
                     overlayView?.post {
                         overlayView?.findViewById<TextView>(R.id.tvOverlayTemp)?.text =
-                            "${String.format("%.0f", temp)}°C"
-                        val fps = MonitorService.currentFps
+                            "${String.format("%.0f", temp)}\u00B0c"
                         overlayView?.findViewById<TextView>(R.id.tvOverlayFps)?.text =
                             "${String.format("%.0f", fps)}fps"
                         overlayView?.findViewById<TextView>(R.id.tvOverlayClock)?.text =
-                            "${maxFreqGhz}GHz"
+                            "${maxFreqGhz}ghz"
                     }
-
-                    Thread.sleep(2000)
+                    Thread.sleep(500)
                 } catch (e: InterruptedException) {
                     break
-                } catch (e: Exception) {
-                    Thread.sleep(5000)
+                } catch (_: Exception) {
+                    Thread.sleep(2000)
                 }
             }
         }.also { it.start() }
@@ -162,9 +151,7 @@ class OverlayService : Service() {
         isRunning = false
         monitorThread?.interrupt()
         overlayView?.let {
-            try {
-                windowManager.removeView(it)
-            } catch (_: Exception) {}
+            try { windowManager.removeView(it) } catch (_: Exception) {}
         }
         overlayView = null
         super.onDestroy()

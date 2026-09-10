@@ -8,13 +8,14 @@
 
     <include layout="@layout/toolbar" />
 
-    <!-- Period filter tabs -->
+    <!-- Period tabs -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="@dimen/spacing_md"
-        android:background="@color/graphite_70">
+        android:paddingHorizontal="@dimen/spacing_md"
+        android:paddingVertical="@dimen/spacing_sm">
+
         <TextView
             android:id="@+id/tvTabToday"
             android:layout_width="0dp"
@@ -22,8 +23,11 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="@string/history_today"
-            android:textColor="@color/copper_signal"
-            android:textSize="@dimen/text_body" />
+            android:textSize="@dimen/text_body"
+            android:paddingVertical="6dp"
+            android:background="@color/graphite_50"
+            android:textColor="@color/copper_signal" />
+
         <TextView
             android:id="@+id/tvTabWeek"
             android:layout_width="0dp"
@@ -31,8 +35,10 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="@string/history_week"
-            android:textColor="@color/steel_40"
-            android:textSize="@dimen/text_body" />
+            android:textSize="@dimen/text_body"
+            android:paddingVertical="6dp"
+            android:textColor="@color/steel_40" />
+
         <TextView
             android:id="@+id/tvTabMonth"
             android:layout_width="0dp"
@@ -40,25 +46,23 @@
             android:layout_weight="1"
             android:gravity="center"
             android:text="@string/history_month"
-            android:textColor="@color/steel_40"
-            android:textSize="@dimen/text_body" />
+            android:textSize="@dimen/text_body"
+            android:paddingVertical="6dp"
+            android:textColor="@color/steel_40" />
     </LinearLayout>
 
-    <!-- Chart area -->
-    <FrameLayout
+    <!-- Custom Canvas chart -->
+    <com.allmightgamebooster.gusdev.ui.history.SessionChartView
+        android:id="@+id/chartSessions"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:padding="@dimen/spacing_md">
-        <com.github.mikephil.charting.charts.LineChart
-            android:id="@+id/chartSessions"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </FrameLayout>
+        android:layout_height="110dp"
+        android:layout_marginHorizontal="@dimen/spacing_md" />
 
     <!-- Session list -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvSessions"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        style="@style/Widget.AllMight.RecyclerView" />
+        android:clipToPadding="false"
+        android:paddingTop="@dimen/spacing_sm" />
 </LinearLayout>

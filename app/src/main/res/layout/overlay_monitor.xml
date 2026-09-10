@@ -1,47 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="@dimen/overlay_height"
-    android:background="@color/overlay_bg"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingHorizontal="@dimen/overlay_padding_h">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlayRoot"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent">
 
-    <TextView
-        android:id="@+id/tvOverlayTemp"
+    <!-- Expanded state: pill -->
+    <LinearLayout
+        android:id="@+id/overlayExpanded"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="monospace"
-        android:textColor="@color/paper_05"
-        android:textSize="13sp" />
+        android:background="@color/overlay_bg"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="7dp"
+        android:gravity="center_vertical"
+        android:visibility="visible">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=" · "
-        android:textColor="@color/steel_40"
-        android:textSize="13sp" />
+        <TextView
+            android:id="@+id/tvOverlayTemp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="@color/paper_05"
+            android:textSize="12sp" />
 
-    <TextView
-        android:id="@+id/tvOverlayFps"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:fontFamily="monospace"
-        android:textColor="@color/paper_05"
-        android:textSize="13sp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" · "
+            android:textColor="#3C3F42"
+            android:textSize="12sp" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text=" · "
-        android:textColor="@color/steel_40"
-        android:textSize="13sp" />
+        <TextView
+            android:id="@+id/tvOverlayFps"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="@color/paper_05"
+            android:textSize="12sp" />
 
-    <TextView
-        android:id="@+id/tvOverlayClock"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:fontFamily="monospace"
-        android:textColor="@color/paper_05"
-        android:textSize="13sp" />
-</LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" · "
+            android:textColor="#3C3F42"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvOverlayClock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="@color/paper_05"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Collapsed state: dot -->
+    <View
+        android:id="@+id/overlayDot"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_gravity="center"
+        android:background="@drawable/overlay_dot_bg"
+        android:visibility="gone" />
+</FrameLayout>

@@ -1,6 +1,9 @@
 package com.allmightgamebooster.gusdev.ui.history
 
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,17 +15,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.allmightgamebooster.gusdev.R
 import com.allmightgamebooster.gusdev.data.BoostConfigStore
 import com.allmightgamebooster.gusdev.model.SessionRecord
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
-import java.text.SimpleDateFormat
-import java.util.*
 
 class HistoryActivity : AppCompatActivity() {
 
-    private lateinit var chart: LineChart
+    private lateinit var chartView: SessionChartView
     private lateinit var rvSessions: RecyclerView
     private lateinit var tvTabToday: TextView
     private lateinit var tvTabWeek: TextView
@@ -46,7 +42,7 @@ class HistoryActivity : AppCompatActivity() {
         supportActionBar?.title = "Riwayat & Statistik"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        chart = findViewById(R.id.chartSessions)
+        chartView = findViewById(R.id.chartSessions)
         rvSessions = findViewById(R.id.rvSessions)
         tvTabToday = findViewById(R.id.tvTabToday)
         tvTabWeek = findViewById(R.id.tvTabWeek)
@@ -56,7 +52,6 @@ class HistoryActivity : AppCompatActivity() {
         tvTabWeek.setOnClickListener { selectTab(FILTER_WEEK) }
         tvTabMonth.setOnClickListener { selectTab(FILTER_MONTH) }
 
-        setupChart()
         selectTab(FILTER_TODAY)
     }
 
@@ -67,13 +62,9 @@ class HistoryActivity : AppCompatActivity() {
 
     private fun selectTab(filter: Int) {
         currentFilter = filter
-        val tabs = listOf(tvTabToday, tvTabWeek, tvTabMonth)
-        tabs.forEachIndexed { i, tab ->
-            tab.setTextColor(
-                resources.getColor(
-                    if (i == filter) R.color.copper_signal else R.color.steel_40, null
-                )
-            )
+        listOf(tvTabToday to FILTER_TODAY, tvTabWeek to FILTER_WEEK, tvTabMonth to FILTER_MONTH).forEach { (tab, f) ->
+            tab.setTextColor(resources.getColor(if (f == filter) R.color.copper_signal else R.color.steel_40, null))
+            tab.setBackgroundColor(if (f == filter) 0xFF3C2E24.toInt() else Color.TRANSPARENT)
         }
         loadSessions()
     }
@@ -83,118 +74,114 @@ class HistoryActivity : AppCompatActivity() {
         val now = System.currentTimeMillis()
         val filtered = when (currentFilter) {
             FILTER_TODAY -> {
-                val cal = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
+                val cal = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
                 }
                 allSessions.filter { it.startTime >= cal.timeInMillis }
             }
-            FILTER_WEEK -> {
-                val weekAgo = now - 7 * 24 * 60 * 60 * 1000L
-                allSessions.filter { it.startTime >= weekAgo }
-            }
-            FILTER_MONTH -> {
-                val monthAgo = now - 30L * 24 * 60 * 60 * 1000L
-                allSessions.filter { it.startTime >= monthAgo }
-            }
+            FILTER_WEEK -> allSessions.filter { it.startTime >= now - 7 * 86_400_000L }
+            FILTER_MONTH -> allSessions.filter { it.startTime >= now - 30L * 86_400_000L }
             else -> allSessions
         }
 
-        updateChart(filtered)
+        chartView.setData(filtered)
         rvSessions.layoutManager = LinearLayoutManager(this)
         rvSessions.adapter = SessionAdapter(filtered)
     }
 
-    private fun setupChart() {
-        chart.apply {
-            description.isEnabled = false
-            legend.isEnabled = false
-            setTouchEnabled(true)
-            setDrawGridBackground(false)
-            setDrawBorders(false)
-            axisRight.isEnabled = false
+    override fun onSupportNavigateUp(): Boolean { finish(); return true }
+}
 
-            xAxis.apply {
-                position = XAxis.XAxisPosition.BOTTOM
-                setDrawGridLines(false)
-                textColor = Color.parseColor("#8C949C")
-                textSize = 10f
-            }
+// ── Custom Canvas Chart (PRD §2) ────────────────────────────────
 
-            axisLeft.apply {
-                textColor = Color.parseColor("#8C949C")
-                textSize = 10f
-                setDrawGridLines(true)
-                gridColor = Color.parseColor("#353839")
-            }
-        }
+class SessionChartView(context: android.util.AttributeSet?) : View(context) {
+
+    private var data: List<SessionRecord> = emptyList()
+
+    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#C97A4A")
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        strokeCap = Paint.Cap.ROUND
     }
 
-    private fun updateChart(sessions: List<SessionRecord>) {
-        if (sessions.isEmpty()) {
-            chart.clear()
-            return
-        }
-
-        val tempEntries = mutableListOf<Entry>()
-        val fpsEntries = mutableListOf<Entry>()
-
-        sessions.reversed().forEachIndexed { index, session ->
-            tempEntries.add(Entry(index.toFloat(), session.peakTemperature))
-            fpsEntries.add(Entry(index.toFloat(), session.avgFps))
-        }
-
-        val tempDataSet = LineDataSet(tempEntries, "Suhu °C").apply {
-            color = Color.parseColor("#C97A4A")
-            setDrawCircles(false)
-            lineWidth = 2f
-            mode = LineDataSet.Mode.CUBIC_BEZIER
-        }
-
-        val fpsDataSet = LineDataSet(fpsEntries, "FPS").apply {
-            color = Color.parseColor("#EDEBE6")
-            setDrawCircles(false)
-            lineWidth = 1.5f
-            mode = LineDataSet.Mode.CUBIC_BEZIER
-            axisDependency = com.github.mikephil.charting.components.YAxis.AxisDependency.LEFT
-        }
-
-        chart.data = LineData(tempDataSet, fpsDataSet)
-        chart.invalidate()
+    private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#35383B")
+        style = Paint.Style.STROKE
+        strokeWidth = 1f
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
+    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#8C949C")
+        textSize = 24f
+        typeface = android.graphics.Typeface.MONOSPACE
     }
 
-    private class SessionAdapter(
-        private val sessions: List<SessionRecord>
-    ) : RecyclerView.Adapter<SessionAdapter.VH>() {
+    private val path = Path()
 
-        class VH(view: View) : RecyclerView.ViewHolder(view) {
-            val tvApp: TextView = view.findViewById(R.id.tvSessionApp)
-            val tvDuration: TextView = view.findViewById(R.id.tvSessionDuration)
-            val tvPeakTemp: TextView = view.findViewById(R.id.tvSessionPeakTemp)
-            val tvAvgFps: TextView = view.findViewById(R.id.tvSessionAvgFps)
+    fun setData(sessions: List<SessionRecord>) {
+        data = sessions
+        invalidate()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        if (data.isEmpty()) return
+
+        val padLeft = 80f
+        val padRight = 20f
+        val padTop = 40f
+        val padBottom = 60f
+        val w = width - padLeft - padRight
+        val h = height - padTop - padBottom
+
+        val temps = data.map { it.peakTemperature }
+        val minT = (temps.minOrNull() ?: 0f) - 5f
+        val maxT = (temps.maxOrNull() ?: 50f) + 5f
+
+        canvas.drawLine(padLeft, padTop + h, padLeft + w, padTop + h, gridPaint)
+        canvas.drawLine(padLeft, padTop, padLeft, padTop + h, gridPaint)
+
+        labelPaint.textAlign = Paint.Align.LEFT
+        canvas.drawText(String.format("%.0f\u00B0", maxT), 0f, padTop + 8f, labelPaint)
+        canvas.drawText(String.format("%.0f\u00B0", minT), 0f, padTop + h, labelPaint)
+
+        path.reset()
+        data.forEachIndexed { i, session ->
+            val x = padLeft + (i.toFloat() / (data.size - 1).coerceAtLeast(1)) * w
+            val y = padTop + h - ((session.peakTemperature - minT) / (maxT - minT)) * h
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
+        canvas.drawPath(path, linePaint)
+    }
+}
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_session, parent, false)
-            return VH(view)
-        }
+// ── Session List Adapter ─────────────────────────────────────────
 
-        override fun getItemCount() = sessions.size
+class SessionAdapter(private val sessions: List<SessionRecord>) : RecyclerView.Adapter<SessionAdapter.VH>() {
 
-        override fun onBindViewHolder(holder: VH, position: Int) {
-            val session = sessions[position]
-            val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+    class VH(view: View) : RecyclerView.ViewHolder(view) {
+        val tvApp: TextView = view.findViewById(R.id.tvSessionApp)
+        val tvDuration: TextView = view.findViewById(R.id.tvSessionDuration)
+        val tvPeakTemp: TextView = view.findViewById(R.id.tvSessionPeakTemp)
+        val tvAvgFps: TextView = view.findViewById(R.id.tvSessionAvgFps)
+    }
 
-            holder.tvApp.text = session.appName
-            holder.tvDuration.text = "${sdf.format(Date(session.startTime))} - ${session.durationMinutes}m"
-            holder.tvPeakTemp.text = String.format("%.0f°C puncak", session.peakTemperature)
-            holder.tvAvgFps.text = String.format("%.0f fps avg", session.avgFps)
-        }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_session, parent, false)
+        return VH(view)
+    }
+
+    override fun getItemCount() = sessions.size
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val s = sessions[position]
+        val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        holder.tvApp.text = s.appName
+        holder.tvDuration.text = "${sdf.format(java.util.Date(s.startTime))} · ${s.durationMinutes}m"
+        holder.tvPeakTemp.text = String.format("%.0f\u00B0C puncak", s.peakTemperature)
+        holder.tvAvgFps.text = String.format("%.0f fps avg", s.avgFps)
     }
 }

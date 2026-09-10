@@ -1,5 +1,6 @@
 package com.allmightgamebooster.gusdev.ui.settings
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.RadioGroup
 import android.widget.SeekBar
@@ -8,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.allmightgamebooster.gusdev.R
 import com.allmightgamebooster.gusdev.data.BoostConfigStore
 import com.allmightgamebooster.gusdev.model.Preset
+import com.allmightgamebooster.gusdev.ui.onboarding.OnboardingActivity
 
 class GlobalSettingsActivity : AppCompatActivity() {
 
@@ -23,7 +25,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = getString(R.string.settings_battery_threshold)
+        supportActionBar?.title = "Pengaturan"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         seekBatteryThreshold = findViewById(R.id.seekBatteryThreshold)
@@ -33,17 +35,16 @@ class GlobalSettingsActivity : AppCompatActivity() {
         tvModuleStatus = findViewById(R.id.tvModuleStatus)
 
         val threshold = BoostConfigStore.getBatteryThreshold(this)
-        seekBatteryThreshold.progress = threshold
-        tvBatteryThreshold.text = "$threshold%"
+        seekBatteryThreshold.progress = threshold - 10
+        tvBatteryThreshold.text = "${threshold}%"
 
         seekBatteryThreshold.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = progress + 10
-                tvBatteryThreshold.text = "$value%"
+                tvBatteryThreshold.text = "${progress + 10}%"
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                BoostConfigStore.setBatteryThreshold(this@GlobalSettingsActivity, seekBar?.progress?.plus(10) ?: 20)
+                BoostConfigStore.setBatteryThreshold(this@GlobalSettingsActivity, (seekBar?.progress ?: 10) + 10)
             }
         })
 
@@ -72,6 +73,10 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
 
         tvModuleStatus.text = if (isModuleActive()) "Modul aktif" else "Modul belum aktif — aktifkan di LSPosed"
+
+        findViewById<android.view.View>(R.id.btnManagePermissions)?.setOnClickListener {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+        }
     }
 
     private fun isModuleActive(): Boolean {
@@ -83,8 +88,5 @@ class GlobalSettingsActivity : AppCompatActivity() {
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
+    override fun onSupportNavigateUp(): Boolean { finish(); return true }
 }
