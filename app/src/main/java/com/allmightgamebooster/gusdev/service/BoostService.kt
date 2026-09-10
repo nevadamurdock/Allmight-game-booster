@@ -11,6 +11,8 @@ import androidx.core.app.NotificationCompat
 import com.allmightgamebooster.gusdev.AllMightApp
 import com.allmightgamebooster.gusdev.R
 import com.allmightgamebooster.gusdev.data.BoostConfigStore
+import com.allmightgamebooster.gusdev.model.Preset
+import com.allmightgamebooster.gusdev.model.SessionRecord
 import com.allmightgamebooster.gusdev.ui.dashboard.DashboardActivity
 import com.allmightgamebooster.gusdev.util.ShellExecutor
 
@@ -21,6 +23,8 @@ class BoostService : Service() {
         const val ACTION_START = "com.allmightgamebooster.gusdev.ACTION_BOOST_START"
         const val ACTION_STOP = "com.allmightgamebooster.gusdev.ACTION_BOOST_STOP"
         const val EXTRA_PACKAGE = "extra_package"
+
+        private var originalBrightness: Int = -1
 
         fun start(context: Context, pkg: String) {
             val intent = Intent(context, BoostService::class.java).apply {
@@ -39,6 +43,7 @@ class BoostService : Service() {
     }
 
     private var activePackage: String? = null
+    private var boostStartTime: Long = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -55,6 +60,7 @@ class BoostService : Service() {
 
     private fun startBoost(pkg: String) {
         activePackage = pkg
+        boostStartTime = System.currentTimeMillis()
         BoostConfigStore.setActiveApp(this, pkg)
 
         val config = BoostConfigStore.getConfig(this, pkg)
@@ -91,6 +97,12 @@ class BoostService : Service() {
 
         if (config.refreshRateLock) {
             ShellExecutor.setRefreshRate(120)
+        }
+
+        if (config.brightnessLock) {
+            val currentBrightness = readCurrentBrightness()
+            originalBrightness = currentBrightness
+            ShellExecutor.setBrightness(255)
         }
 
         if (config.inputLatency) {
@@ -150,8 +162,19 @@ class BoostService : Service() {
             ShellExecutor.setCpuGovernor("schedutil")
         }
 
-        ShellExecutor.execRoot("settings delete system peak_refresh_rate")
-        ShellExecutor.execRoot("settings delete system min_refresh_rate")
+        if (config.refreshRateLock) {
+            ShellExecutor.unlockRefreshRate()
+        }
+
+        if (config.brightnessLock && originalBrightness >= 0) {
+            ShellExecutor.setBrightness(originalBrightness)
+            originalBrightness = -1
+        }
+
+        if (config.inputLatency) {
+            ShellExecutor.writeToFile("/proc/sys/kernel/sched_child_runs_first", "0")
+            ShellExecutor.writeToFile("/proc/sys/vm/dirty_writeback_centisecs", "5000")
+        }
 
         if (config.autoDnd) {
             deactivateDnd()
@@ -170,12 +193,44 @@ class BoostService : Service() {
             if (uid > 0) ShellExecutor.setNetworkQos(uid, false)
         }
 
+        saveSession(pkg, config.preset)
+
         stopService(Intent(this, OverlayService::class.java))
         BoostConfigStore.setActiveApp(this, null)
         activePackage = null
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun saveSession(pkg: String, preset: Preset) {
+        val peakTemp = MonitorService.peakTemperature
+        val avgFps = MonitorService.avgFps
+        val appLabel = try {
+            packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+        } catch (_: Throwable) { pkg }
+
+        val record = SessionRecord(
+            packageName = pkg,
+            appName = appLabel,
+            startTime = boostStartTime,
+            endTime = System.currentTimeMillis(),
+            peakTemperature = peakTemp,
+            avgFps = avgFps,
+            preset = preset
+        )
+        BoostConfigStore.saveSession(this, record)
+    }
+
+    private fun readCurrentBrightness(): Int {
+        return try {
+            contentResolver.query(
+                android.provider.Settings.System.getUriFor("screen_brightness"),
+                null, null, null, null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0) else 128
+            } ?: 128
+        } catch (_: Throwable) { 128 }
     }
 
     private fun activateDnd() {
@@ -203,12 +258,9 @@ class BoostService : Service() {
 
     private fun getUidForPackage(pkg: String): Int {
         return try {
-            val pm = packageManager
-            val appInfo = pm.getApplicationInfo(pkg, 0)
+            val appInfo = packageManager.getApplicationInfo(pkg, 0)
             appInfo.uid
-        } catch (_: Throwable) {
-            -1
-        }
+        } catch (_: Throwable) { -1 }
     }
 
     private fun buildNotification(pkg: String): Notification {

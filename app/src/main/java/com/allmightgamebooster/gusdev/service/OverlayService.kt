@@ -141,6 +141,9 @@ class OverlayService : Service() {
                     overlayView?.post {
                         overlayView?.findViewById<TextView>(R.id.tvOverlayTemp)?.text =
                             "${String.format("%.0f", temp)}°C"
+                        val fps = MonitorService.currentFps
+                        overlayView?.findViewById<TextView>(R.id.tvOverlayFps)?.text =
+                            "${String.format("%.0f", fps)}fps"
                         overlayView?.findViewById<TextView>(R.id.tvOverlayClock)?.text =
                             "${maxFreqGhz}GHz"
                     }

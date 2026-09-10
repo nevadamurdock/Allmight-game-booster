@@ -133,6 +133,7 @@ class DashboardActivity : AppCompatActivity() {
             val maxFreqMhz = freqs.maxByOrNull { it.second }?.second?.div(1000) ?: 0
             val (totalRam, availRam) = ShellExecutor.getRamUsage()
             val usedRamPct = if (totalRam > 0) ((totalRam - availRam) * 100 / totalRam) else 0
+            val fps = com.allmightgamebooster.gusdev.service.MonitorService.currentFps
 
             runOnUiThread {
                 gaugeTemperature.setValue(temp, 60f, "SUHU", "°C")
@@ -144,7 +145,7 @@ class DashboardActivity : AppCompatActivity() {
                 )
                 tvRamReadout.text = "RAM ${usedRamPct}%"
                 tvIoReadout.text = "IO"
-                tvFpsReadout.text = "FPS --"
+                tvFpsReadout.text = if (fps > 0) "${String.format("%.0f", fps)} FPS" else "FPS --"
             }
         }.start()
     }

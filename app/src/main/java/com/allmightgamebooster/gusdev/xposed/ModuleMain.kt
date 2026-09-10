@@ -140,6 +140,9 @@ class ModuleMain : XposedModule() {
                 config.networkQos || config.lowLatencyAudio
     }
 
+    @Volatile
+    private var thermalThreadRunning = false
+
     private fun applyGovernorHooks(config: BoostConfigData) {
         if (config.governorLock) {
             ShellExecutor.setCpuGovernor("performance")
@@ -148,16 +151,20 @@ class ModuleMain : XposedModule() {
         }
 
         if (config.adaptiveThermal) {
+            thermalThreadRunning = true
             Thread {
-                while (true) {
+                var checks = 0
+                while (thermalThreadRunning && checks < 200) {
                     val temp = ShellExecutor.getThermalTemp()
                     when {
                         temp > 45f -> ShellExecutor.setCpuGovernor("schedutil")
                         temp > 40f -> ShellExecutor.setCpuGovernor("ondemand")
                         config.governorLock -> ShellExecutor.setCpuGovernor("performance")
                     }
+                    checks++
                     Thread.sleep(3000)
                 }
+                thermalThreadRunning = false
             }.start()
         }
     }

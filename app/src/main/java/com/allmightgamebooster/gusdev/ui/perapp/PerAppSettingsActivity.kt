@@ -101,6 +101,8 @@ class PerAppSettingsActivity : AppCompatActivity() {
 
             FeatureItem(getString(R.string.category_network), getString(R.string.feature_network_qos), getString(R.string.feature_network_qos_desc), { config.networkQos }, { config.networkQos = it }),
 
+            FeatureItem(getString(R.string.category_network), getString(R.string.feature_dnd), getString(R.string.feature_dnd_desc), { config.autoDnd }, { config.autoDnd = it }),
+
             FeatureItem(getString(R.string.category_audio), getString(R.string.feature_low_latency_audio), getString(R.string.feature_low_latency_audio_desc), { config.lowLatencyAudio }, { config.lowLatencyAudio = it }),
 
             FeatureItem(getString(R.string.category_security), getString(R.string.feature_root_hide), getString(R.string.feature_root_hide_desc), { config.rootHide }, { enabled ->

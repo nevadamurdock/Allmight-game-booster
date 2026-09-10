@@ -36,9 +36,8 @@ object ShellExecutor {
     }
 
     fun setCpuGovernor(governor: String) {
-        val cpuDirs = exec("ls /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor")
-        cpuDirs.lines().filter { it.isNotBlank() }.forEach { path ->
-            writeToFile(path.trim(), governor)
+        for (i in 0..7) {
+            writeToFile("/sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor", governor)
         }
     }
 
@@ -46,10 +45,13 @@ object ShellExecutor {
         val paths = listOf(
             "/sys/class/kgsl/kgsl-3d0/devfreq/governor",
             "/sys/class/devfreq/gpufreq/governor",
-            "/sys/kernel/gpu/gpu_governor"
+            "/sys/kernel/gpu/gpu_governor",
+            "/sys/class/devfreq/soc:qcom,kgsl-busmon/governor",
+            "/sys/devices/platform/soc/soc:qcom,kgsl-busmon.0/devfreq/soc:qcom,kgsl-busmon.0/governor"
         )
         paths.forEach { path ->
-            if (readFromFile(path).isNotBlank()) {
+            val content = readFromFile(path).trim()
+            if (content.isNotBlank() && content != "error") {
                 writeToFile(path, governor)
             }
         }
@@ -59,7 +61,7 @@ object ShellExecutor {
         val result = mutableListOf<Pair<Int, Long>>()
         for (i in 0..7) {
             val freq = readFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq")
-            freq.toLongOrNull()?.let { result.add(Pair(i, it)) }
+            freq.trim().toLongOrNull()?.let { result.add(Pair(i, it)) }
         }
         return result
     }
@@ -79,15 +81,6 @@ object ShellExecutor {
         return 0f
     }
 
-    fun setGpuFreq(freqKhz: Long) {
-        val paths = listOf(
-            "/sys/class/kgsl/kgsl-3d0/devfreq/max_freq",
-            "/sys/class/kgsl/kgsl-3d0/max_gpuclk",
-            "/sys/kernel/gpu/gpu_max_freq"
-        )
-        paths.forEach { writeToFile(it, freqKhz.toString()) }
-    }
-
     fun setTopAppPid(pid: Int, adj: Int) {
         execRoot("echo $adj > /proc/$pid/oom_score_adj")
     }
@@ -100,8 +93,8 @@ object ShellExecutor {
         execRoot("kill -CONT $pid")
     }
 
-    fun setCpuAffinity(pid: Int, mask: Long) {
-        execRoot("taskset -p ${mask.toString(16)} $pid")
+    fun setCpuAffinity(pid: Int, mask: Int) {
+        execRoot("taskset -p ${Integer.toHexString(mask)} $pid")
     }
 
     fun setIoPriority(pid: Int, classValue: Int, priority: Int) {
@@ -110,10 +103,6 @@ object ShellExecutor {
 
     fun setSurfaceFlingerArgs() {
         execRoot("service call SurfaceFlinger 1034 i32 1")
-    }
-
-    fun setRenderThreadPriority(pid: Int, priority: Int) {
-        execRoot("renice -n $priority -p $pid")
     }
 
     fun setNetworkQos(uid: Int, enable: Boolean) {
@@ -125,9 +114,12 @@ object ShellExecutor {
     }
 
     fun setLowLatencyAudio(enable: Boolean) {
-        val value = if (enable) "1" else "0"
         writeToFile("/proc/sys/kernel/sched_tunable_scaling", "0")
-        writeToFile("/sys/module/snd_hda_intel/parameters/power_save", if (enable) "0" else "1")
+        val hdaPath = "/sys/module/snd_hda_intel/parameters/power_save"
+        val content = readFromFile(hdaPath).trim()
+        if (content.isNotBlank() && content != "error") {
+            writeToFile(hdaPath, if (enable) "0" else "1")
+        }
     }
 
     fun setRefreshRate(rate: Int) {
@@ -135,12 +127,17 @@ object ShellExecutor {
         execRoot("settings put system min_refresh_rate $rate")
     }
 
-    fun setScreenPinning(enabled: Boolean) {
-        execRoot("settings put secure lock_to_app_enabled ${if (enabled) 1 else 0}")
+    fun unlockRefreshRate() {
+        execRoot("settings delete system peak_refresh_rate")
+        execRoot("settings delete system min_refresh_rate")
     }
 
-    fun hideRootForPackage(pkg: String) {
-        execRoot("magisk hide --add $pkg")
+    fun setBrightness(value: Int) {
+        execRoot("settings put system screen_brightness $value")
+    }
+
+    fun setScreenPinning(enabled: Boolean) {
+        execRoot("settings put secure lock_to_app_enabled ${if (enabled) 1 else 0}")
     }
 
     fun isRootAvailable(): Boolean {
@@ -155,20 +152,9 @@ object ShellExecutor {
         }
     }
 
-    fun getInstalledApps(): List<Pair<String, String>> {
-        val result = mutableListOf<Pair<String, String>>()
-        val output = exec("pm list packages -3")
-        output.lines().filter { it.startsWith("package:") }.forEach { line ->
-            val pkg = line.removePrefix("package:").trim()
-            val label = exec("pm dump $pkg | head -1")
-            result.add(Pair(pkg, label.ifBlank { pkg }))
-        }
-        return result
-    }
-
     fun getProcessPid(pkg: String): Int {
         val output = exec("pidof $pkg")
-        return output.trim().split(" ").firstOrNull()?.toIntOrNull() ?: -1
+        return output.trim().split("\\s+".toRegex()).firstOrNull()?.toIntOrNull() ?: -1
     }
 
     fun getRamUsage(): Pair<Long, Long> {
@@ -185,13 +171,15 @@ object ShellExecutor {
     }
 
     fun killBackgroundApps() {
-        val output = exec("ps -A -o PID,NAME")
+        val output = exec("ps -A")
         val myPid = android.os.Process.myPid()
+        val myPackage = "com.allmightgamebooster.gusdev"
         output.lines().filter { it.isNotBlank() }.forEach { line ->
             val parts = line.trim().split("\\s+".toRegex())
             if (parts.size >= 2) {
-                val pid = parts[0].toIntOrNull() ?: return@forEach
-                if (pid != myPid && pid > 1000) {
+                val pid = parts[1].toIntOrNull() ?: return@forEach
+                val name = parts.last()
+                if (pid != myPid && pid > 1000 && !name.contains(myPackage)) {
                     execRoot("kill -9 $pid")
                 }
             }
