@@ -76,9 +76,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun isModuleActive(): Boolean {
         return try {
-            val cls = Class.forName("io.github.libxposed.api.XposedModule")
-            val moduleClass = com.allmightgamebooster.gusdev.xposed.ModuleMain::class.java
-            cls.isAssignableFrom(moduleClass)
+            Class.forName("io.github.libxposed.api.XposedModule")
         } catch (_: Throwable) {
             false
         }
