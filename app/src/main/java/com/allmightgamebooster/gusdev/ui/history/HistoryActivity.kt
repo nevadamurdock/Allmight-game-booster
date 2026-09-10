@@ -96,7 +96,7 @@ class HistoryActivity : AppCompatActivity() {
 
 // ── Custom Canvas Chart (PRD §2) ────────────────────────────────
 
-class SessionChartView(context: android.util.AttributeSet?) : View(context) {
+class SessionChartView(context: Context, attrs: android.util.AttributeSet? = null) : View(context, attrs) {
 
     private var data: List<SessionRecord> = emptyList()
 

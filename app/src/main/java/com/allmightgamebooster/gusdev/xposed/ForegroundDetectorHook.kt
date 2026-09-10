@@ -27,7 +27,7 @@ object ForegroundDetectorHook {
             val amsClass = Class.forName(
                 "com.android.server.am.ActivityManagerService",
                 false,
-                param.classLoader
+                param.defaultClassLoader
             )
 
             val method = amsClass.declaredMethods.firstOrNull { m ->
