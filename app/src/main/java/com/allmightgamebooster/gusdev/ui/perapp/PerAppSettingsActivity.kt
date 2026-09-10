@@ -14,15 +14,24 @@ import com.allmightgamebooster.gusdev.data.BoostConfigStore
 import com.allmightgamebooster.gusdev.model.AppBoostConfig
 import com.allmightgamebooster.gusdev.model.Preset
 import com.allmightgamebooster.gusdev.util.RootHideConfig
-import com.google.android.material.button.MaterialButton
+import android.widget.Button
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.allmightgamebooster.gusdev.R
+import com.allmightgamebooster.gusdev.data.BoostConfigStore
+import com.allmightgamebooster.gusdev.model.AppBoostConfig
+import com.allmightgamebooster.gusdev.model.Preset
+import com.allmightgamebooster.gusdev.util.RootHideConfig
 import com.google.android.material.switchmaterial.SwitchMaterial
 
 class PerAppSettingsActivity : AppCompatActivity() {
 
     private lateinit var rvFeatures: RecyclerView
-    private lateinit var btnPerformance: MaterialButton
-    private lateinit var btnBalanced: MaterialButton
-    private lateinit var btnBatterySaver: MaterialButton
+    private lateinit var btnPerformance: Button
+    private lateinit var btnBalanced: Button
+    private lateinit var btnBatterySaver: Button
     private lateinit var config: AppBoostConfig
 
     private data class FeatureItem(

@@ -135,5 +135,47 @@
                     android:textSize="@dimen/text_small" />
             </LinearLayout>
         </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/spacing_md" />
+
+        <!-- About Dev -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/graphite_70"
+            android:orientation="vertical"
+            android:padding="@dimen/panel_padding">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="About Developer"
+                android:textColor="@color/copper_signal"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AgusDEV"
+                android:textColor="@color/paper_05"
+                android:textSize="@dimen/text_body"
+                android:layout_marginTop="@dimen/spacing_sm" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Telegram: @Machiavellianx"
+                android:textColor="@color/steel_40"
+                android:textSize="@dimen/text_small"
+                android:layout_marginTop="@dimen/spacing_xs" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pure love to making this project."
+                android:textColor="@color/steel_40"
+                android:textSize="@dimen/text_small"
+                android:layout_marginTop="@dimen/spacing_xs"
+                android:textStyle="italic" />
+        </LinearLayout>
     </ScrollView>
 </LinearLayout>

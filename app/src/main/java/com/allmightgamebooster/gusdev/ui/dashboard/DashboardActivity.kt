@@ -44,7 +44,7 @@ class DashboardActivity : AppCompatActivity() {
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = getString(R.string.dashboard_title)
+        supportActionBar?.title = getString(R.string.app_name)
 
         emptyState = findViewById(R.id.emptyState)
         activeState = findViewById(R.id.activeState)

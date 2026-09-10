@@ -59,7 +59,7 @@ class AppListActivity : AppCompatActivity() {
 
         switchShowSystem.setOnCheckedChangeListener { _, isChecked ->
             showSystem = isChecked
-            filterApps(etSearch.text.toString())
+            loadApps()
         }
 
         loadApps()

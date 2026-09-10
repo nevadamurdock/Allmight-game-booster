@@ -13,44 +13,57 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="@dimen/spacing_md"
+        android:paddingHorizontal="@dimen/spacing_md"
+        android:paddingVertical="@dimen/spacing_sm"
         android:background="@color/graphite_70">
 
-        <com.google.android.material.button.MaterialButton
+        <Button
             android:id="@+id/btnPerformance"
-            style="@style/Widget.AllMight.Chip"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:layout_weight="1"
-            android:layout_marginEnd="@dimen/spacing_xs"
+            android:layout_marginEnd="4dp"
             android:text="@string/preset_performance"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textSize="12sp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:backgroundTint="@color/graphite_50"
+            android:textColor="@color/paper_05" />
 
-        <com.google.android.material.button.MaterialButton
+        <Button
             android:id="@+id/btnBalanced"
-            style="@style/Widget.AllMight.Chip"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:layout_weight="1"
-            android:layout_marginHorizontal="@dimen/spacing_xs"
+            android:layout_marginHorizontal="4dp"
             android:text="@string/preset_balanced"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textSize="12sp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:backgroundTint="@color/graphite_50"
+            android:textColor="@color/paper_05" />
 
-        <com.google.android.material.button.MaterialButton
+        <Button
             android:id="@+id/btnBatterySaver"
-            style="@style/Widget.AllMight.Chip"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="36dp"
             android:layout_weight="1"
-            android:layout_marginStart="@dimen/spacing_xs"
+            android:layout_marginStart="4dp"
             android:text="@string/preset_battery_saver"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textSize="12sp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:backgroundTint="@color/graphite_50"
+            android:textColor="@color/paper_05" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvFeatures"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        style="@style/Widget.AllMight.RecyclerView"
+        android:clipToPadding="false"
         android:paddingTop="@dimen/spacing_sm" />
 </LinearLayout>
