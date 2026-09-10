@@ -133,7 +133,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="IZIN & INFO"
+                android:text="IZIN &amp; INFO"
                 android:textColor="@color/steel_40"
                 android:textSize="11sp"
                 android:letterSpacing="0.08"
