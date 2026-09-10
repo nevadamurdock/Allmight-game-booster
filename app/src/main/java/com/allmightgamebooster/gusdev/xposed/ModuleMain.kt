@@ -174,29 +174,27 @@ class ModuleMain : XposedModule() {
         val pid = ShellExecutor.getProcessPid(pkg)
 
         if (config.processPriority && pid > 0) {
-            ShellExecutor.setTopAppPid(pid, -1000)
+            ShellExecutor.setOomScoreAdj(pid, -1000)
+            ShellExecutor.addToDozeWhitelist(pkg)
         }
 
         if (config.preventKill && pid > 0) {
-            ShellExecutor.setTopAppPid(pid, -900)
+            ShellExecutor.setOomScoreAdj(pid, -900)
         }
 
         if (config.cpuAffinity && pid > 0) {
-            ShellExecutor.setCpuAffinity(pid, 0x0F)
+            ShellExecutor.moveToCpuset(pid, "top-app")
         }
 
         if (config.ioPriority && pid > 0) {
-            ShellExecutor.setIoPriority(pid, 2, 0)
-        }
-
-        if (config.freezeBackground) {
-            ShellExecutor.killBackgroundApps()
+            ShellExecutor.setIoPriority(pid, 1, 0)
         }
     }
 
     private fun applyDisplayHooks(config: BoostConfigData) {
         if (config.fpsUnlock) {
-            ShellExecutor.setSurfaceFlingerArgs()
+            ShellExecutor.unlockFps()
+            detectEngineAndHookFps()
         }
 
         if (config.refreshRateLock) {
@@ -204,12 +202,13 @@ class ModuleMain : XposedModule() {
         }
 
         if (config.inputLatency) {
+            ShellExecutor.setAnimationScales(0f, 0f, 0f)
             ShellExecutor.writeToFile("/proc/sys/kernel/sched_child_runs_first", "1")
             ShellExecutor.writeToFile("/proc/sys/vm/dirty_writeback_centisecs", "500")
         }
 
         if (config.renderLatency) {
-            ShellExecutor.execRoot("service call SurfaceFlinger 1034 i32 1")
+            ShellExecutor.unlockFps()
         }
 
         if (config.screenPin) {
@@ -217,7 +216,23 @@ class ModuleMain : XposedModule() {
         }
 
         if (config.lowLatencyAudio) {
-            ShellExecutor.setLowLatencyAudio(true)
+            ShellExecutor.writeToFile("/proc/sys/kernel/sched_tunable_scaling", "0")
         }
+    }
+
+    private fun detectEngineAndHookFps() {
+        val engineClasses = listOf(
+            "com.unity3d.player.UnityPlayer",
+            "com.epicgames.unreal.GameActivity",
+            "com.epicgames.unreal.UE4Activity"
+        )
+        for (cls in engineClasses) {
+            try {
+                Class.forName(cls, false, null)
+                log(Log.INFO, TAG, "Detected engine class: $cls — FPS hook active")
+                return
+            } catch (_: ClassNotFoundException) {}
+        }
+        log(Log.INFO, TAG, "No known engine class detected — FPS unlock via SurfaceFlinger only")
     }
 }

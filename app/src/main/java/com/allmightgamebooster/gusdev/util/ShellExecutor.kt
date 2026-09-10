@@ -32,7 +32,18 @@ object ShellExecutor {
     }
 
     fun readFromFile(path: String): String {
-        return exec("cat $path")
+        return exec("cat $path 2>/dev/null")
+    }
+
+    // ── Governor ──────────────────────────────────────────────────
+
+    fun getCpuGovernor(): Map<Int, String> {
+        val result = mutableMapOf<Int, String>()
+        for (i in 0..7) {
+            val gov = readFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor").trim()
+            if (gov.isNotBlank() && gov != "error") result[i] = gov
+        }
+        return result
     }
 
     fun setCpuGovernor(governor: String) {
@@ -41,35 +52,44 @@ object ShellExecutor {
         }
     }
 
-    fun setGpuGovernor(governor: String) {
+    fun getGpuGovernorPath(): String? {
         val paths = listOf(
             "/sys/class/kgsl/kgsl-3d0/devfreq/governor",
             "/sys/class/devfreq/gpufreq/governor",
             "/sys/kernel/gpu/gpu_governor",
             "/sys/class/devfreq/soc:qcom,kgsl-busmon/governor",
-            "/sys/devices/platform/soc/soc:qcom,kgsl-busmon.0/devfreq/soc:qcom,kgsl-busmon.0/governor"
+            "/sys/class/misc/mali0/device/devfreq/governor",
+            "/sys/devices/platform/mali.0/devfreq/mali.0/governor"
         )
-        paths.forEach { path ->
-            val content = readFromFile(path).trim()
-            if (content.isNotBlank() && content != "error") {
-                writeToFile(path, governor)
-            }
-        }
+        return paths.firstOrNull { readFromFile(it).trim().let { v -> v.isNotBlank() && v != "error" } }
     }
+
+    fun getGpuGovernor(): String {
+        return getGpuGovernorPath()?.let { readFromFile(it).trim() } ?: "unknown"
+    }
+
+    fun setGpuGovernor(governor: String) {
+        getGpuGovernorPath()?.let { writeToFile(it, governor) }
+    }
+
+    // ── CPU Frequency ─────────────────────────────────────────────
 
     fun getCpuFreq(): List<Pair<Int, Long>> {
         val result = mutableListOf<Pair<Int, Long>>()
         for (i in 0..7) {
-            val freq = readFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq")
-            freq.trim().toLongOrNull()?.let { result.add(Pair(i, it)) }
+            val freq = readFromFile("/sys/devices/system/cpu/cpu$i/cpufreq/scaling_cur_freq").trim()
+            freq.toLongOrNull()?.let { result.add(Pair(i, it)) }
         }
         return result
     }
+
+    // ── Thermal ───────────────────────────────────────────────────
 
     fun getThermalTemp(): Float {
         val thermalPaths = listOf(
             "/sys/class/thermal/thermal_zone0/temp",
             "/sys/class/thermal/thermal_zone1/temp",
+            "/sys/class/thermal/thermal_zone2/temp",
             "/sys/devices/virtual/thermal/thermal_zone0/temp"
         )
         for (path in thermalPaths) {
@@ -81,46 +101,115 @@ object ShellExecutor {
         return 0f
     }
 
-    fun setTopAppPid(pid: Int, adj: Int) {
-        execRoot("echo $adj > /proc/$pid/oom_score_adj")
+    // ── Process Priority (PRD §3) ─────────────────────────────────
+
+    fun getProcessPid(pkg: String): Int {
+        val output = exec("pidof $pkg")
+        return output.trim().split("\\s+".toRegex()).firstOrNull()?.toIntOrNull() ?: -1
     }
 
+    fun setOomScoreAdj(pid: Int, adj: Int) {
+        writeToFile("/proc/$pid/oom_score_adj", adj.toString())
+    }
+
+    fun addToDozeWhitelist(pkg: String) {
+        execRoot("dumpsys deviceidle whitelist +$pkg")
+    }
+
+    fun removeFromDozeWhitelist(pkg: String) {
+        execRoot("dumpsys deviceidle whitelist -$pkg")
+    }
+
+    // ── CPU Affinity via cpuset (PRD §5) ──────────────────────────
+
+    fun moveToCpuset(pid: Int, group: String) {
+        writeToFile("/dev/cpuset/$group/tasks", pid.toString())
+    }
+
+    // ── Freeze via cgroup freezer (PRD §7) ────────────────────────
+
     fun freezeProcess(pid: Int) {
-        execRoot("kill -STOP $pid")
+        val cgroupPath = findCgroupFreezerPath(pid)
+        if (cgroupPath != null) {
+            writeToFile("$cgroupPath/freezer.state", "FROZEN")
+        } else {
+            execRoot("kill -STOP $pid")
+        }
     }
 
     fun unfreezeProcess(pid: Int) {
-        execRoot("kill -CONT $pid")
+        val cgroupPath = findCgroupFreezerPath(pid)
+        if (cgroupPath != null) {
+            writeToFile("$cgroupPath/freezer.state", "THAWED")
+        } else {
+            execRoot("kill -CONT $pid")
+        }
     }
 
-    fun setCpuAffinity(pid: Int, mask: Int) {
-        execRoot("taskset -p ${Integer.toHexString(mask)} $pid")
+    private fun findCgroupFreezerPath(pid: Int): String? {
+        val cgroupV1 = readFromFile("/proc/$pid/cgroup").trim()
+        val freezerLine = cgroupV1.lines().firstOrNull { it.contains("freezer") }
+        if (freezerLine != null) {
+            val parts = freezerLine.split(":")
+            if (parts.size >= 3) {
+                val path = parts[2].trim()
+                val fullPath = "/sys/fs/cgroup/freezer$path"
+                if (readFromFile("$fullPath/freezer.state").trim().isNotBlank()) return fullPath
+            }
+        }
+        val cgroupV2Path = "/sys/fs/cgroup/uid_${getUidForPid(pid)}_pid_$pid"
+        if (readFromFile("$cgroupV2Path/cgroup.freeze").trim().isNotBlank()) return cgroupV2Path
+        return null
     }
+
+    private fun getUidForPid(pid: Int): Int {
+        val status = readFromFile("/proc/$pid/status")
+        return status.lines().firstOrNull { it.startsWith("Uid:") }
+            ?.split("\\s+".toRegex())?.getOrNull(1)?.toIntOrNull() ?: 0
+    }
+
+    // ── Network QoS (PRD §8) ──────────────────────────────────────
+
+    fun setupNetworkQos(uid: Int) {
+        execRoot("iptables -t mangle -A OUTPUT -m owner --uid-owner $uid -j MARK --set-mark 1")
+        execRoot("tc qdisc add dev wlan0 root handle 1: htb default 10")
+        execRoot("tc class add dev wlan0 parent 1: classid 1:1 htb rate 100mbit ceil 100mbit")
+        execRoot("tc class add dev wlan0 parent 1:1 classid 1:10 htb rate 80mbit ceil 100mbit")
+        execRoot("tc class add dev wlan0 parent 1:1 classid 1:20 htb rate 20mbit ceil 40mbit")
+        execRoot("tc filter add dev wlan0 protocol ip parent 1:0 prio 1 handle 1 fw flowid 1:10")
+        execRoot("tc filter add dev wlan0 protocol ip parent 1:0 prio 2 flowid 1:20")
+    }
+
+    fun removeNetworkQos(uid: Int) {
+        execRoot("iptables -t mangle -D OUTPUT -m owner --uid-owner $uid -j MARK --set-mark 1")
+        execRoot("tc qdisc del dev wlan0 root 2>/dev/null")
+    }
+
+    // ── Latency (PRD §4) ──────────────────────────────────────────
+
+    fun setAnimationScales(animation: Float, transition: Float, animator: Float) {
+        execRoot("settings put global window_animation_scale $animation")
+        execRoot("settings put global transition_animation_scale $transition")
+        execRoot("settings put global animator_duration_scale $animator")
+    }
+
+    fun getAnimationScales(): Triple<Float, Float, Float> {
+        val a = exec("settings get global window_animation_scale").trim().toFloatOrNull() ?: 1f
+        val t = exec("settings get global transition_animation_scale").trim().toFloatOrNull() ?: 1f
+        val d = exec("settings get global animator_duration_scale").trim().toFloatOrNull() ?: 1f
+        return Triple(a, t, d)
+    }
+
+    // ── I/O Priority (PRD §14) ────────────────────────────────────
 
     fun setIoPriority(pid: Int, classValue: Int, priority: Int) {
-        execRoot("ionice -c $classValue -n $priority -p $pid")
-    }
-
-    fun setSurfaceFlingerArgs() {
-        execRoot("service call SurfaceFlinger 1034 i32 1")
-    }
-
-    fun setNetworkQos(uid: Int, enable: Boolean) {
-        if (enable) {
-            execRoot("iptables -A OUTPUT -m owner --uid-owner $uid -j ACCEPT")
-        } else {
-            execRoot("iptables -D OUTPUT -m owner --uid-owner $uid -j ACCEPT")
+        val hasIonice = readFromFile("/system/bin/ionice").trim().isNotBlank()
+        if (hasIonice) {
+            execRoot("ionice -c $classValue -n $priority -p $pid")
         }
     }
 
-    fun setLowLatencyAudio(enable: Boolean) {
-        writeToFile("/proc/sys/kernel/sched_tunable_scaling", "0")
-        val hdaPath = "/sys/module/snd_hda_intel/parameters/power_save"
-        val content = readFromFile(hdaPath).trim()
-        if (content.isNotBlank() && content != "error") {
-            writeToFile(hdaPath, if (enable) "0" else "1")
-        }
-    }
+    // ── Display (PRD §17) ─────────────────────────────────────────
 
     fun setRefreshRate(rate: Int) {
         execRoot("settings put system peak_refresh_rate $rate")
@@ -136,9 +225,92 @@ object ShellExecutor {
         execRoot("settings put system screen_brightness $value")
     }
 
+    fun getAutoBrightness(): Int {
+        return exec("settings get system screen_brightness_mode").trim().toIntOrNull() ?: 1
+    }
+
+    fun setAutoBrightness(enabled: Boolean) {
+        execRoot("settings put system screen_brightness_mode ${if (enabled) 1 else 0}")
+    }
+
+    fun getBrightness(): Int {
+        return exec("settings get system screen_brightness").trim().toIntOrNull() ?: 128
+    }
+
+    // ── Screen Pinning (PRD §19) ──────────────────────────────────
+
     fun setScreenPinning(enabled: Boolean) {
         execRoot("settings put secure lock_to_app_enabled ${if (enabled) 1 else 0}")
     }
+
+    // ── SurfaceFlinger ────────────────────────────────────────────
+
+    fun unlockFps() {
+        execRoot("service call SurfaceFlinger 1034 i32 1")
+    }
+
+    // ── FPS Reading ───────────────────────────────────────────────
+
+    fun getFpsFromDumpsys(): Float {
+        val output = exec("dumpsys SurfaceFlinger --latency")
+        val lines = output.lines().filter { it.contains("\t") }
+        if (lines.size < 2) return 0f
+        var totalFrameTime = 0L
+        var count = 0
+        for (i in 1 until minOf(lines.size, 129)) {
+            val parts = lines[i].split("\t")
+            if (parts.size >= 3) {
+                val present = parts[1].trim().toLongOrNull() ?: continue
+                val desired = parts[0].trim().toLongOrNull() ?: continue
+                val delta = present - desired
+                if (delta in 0..100_000_000) {
+                    totalFrameTime += delta
+                    count++
+                }
+            }
+        }
+        return if (count > 0) (count * 1_000_000_000f) / totalFrameTime else 0f
+    }
+
+    // ── Pre-Launch Clean (PRD §18) ────────────────────────────────
+
+    fun forceStopApp(pkg: String) {
+        execRoot("am force-stop $pkg")
+    }
+
+    fun getRunningApps(): List<String> {
+        val output = exec("pm list packages -3")
+        return output.lines()
+            .filter { it.startsWith("package:") }
+            .map { it.removePrefix("package:").trim() }
+    }
+
+    // ── RootHide (PRD §21) ────────────────────────────────────────
+
+    fun detectRootManager(): String {
+        if (exec("ksud --version").contains("ksud", ignoreCase = true)) return "kernelsu"
+        if (exec("magisk --version").contains("Magisk", ignoreCase = true)) return "magisk"
+        if (exec("apatch --version").contains("apatch", ignoreCase = true)) return "apatch"
+        return "unknown"
+    }
+
+    fun hideRootAdd(pkg: String) {
+        when (detectRootManager()) {
+            "kernelsu" -> execRoot("ksud module hide --add $pkg")
+            "magisk" -> execRoot("magisk denylist add $pkg")
+            "apatch" -> execRoot("apatch hide add $pkg")
+        }
+    }
+
+    fun hideRootRemove(pkg: String) {
+        when (detectRootManager()) {
+            "kernelsu" -> execRoot("ksud module hide --remove $pkg")
+            "magisk" -> execRoot("magisk denylist rm $pkg")
+            "apatch" -> execRoot("apatch hide remove $pkg")
+        }
+    }
+
+    // ── Misc ──────────────────────────────────────────────────────
 
     fun isRootAvailable(): Boolean {
         return try {
@@ -152,11 +324,6 @@ object ShellExecutor {
         }
     }
 
-    fun getProcessPid(pkg: String): Int {
-        val output = exec("pidof $pkg")
-        return output.trim().split("\\s+".toRegex()).firstOrNull()?.toIntOrNull() ?: -1
-    }
-
     fun getRamUsage(): Pair<Long, Long> {
         val memInfo = exec("cat /proc/meminfo")
         var total = 0L
@@ -168,21 +335,5 @@ object ShellExecutor {
             }
         }
         return Pair(total, available)
-    }
-
-    fun killBackgroundApps() {
-        val output = exec("ps -A")
-        val myPid = android.os.Process.myPid()
-        val myPackage = "com.allmightgamebooster.gusdev"
-        output.lines().filter { it.isNotBlank() }.forEach { line ->
-            val parts = line.trim().split("\\s+".toRegex())
-            if (parts.size >= 2) {
-                val pid = parts[1].toIntOrNull() ?: return@forEach
-                val name = parts.last()
-                if (pid != myPid && pid > 1000 && !name.contains(myPackage)) {
-                    execRoot("kill -9 $pid")
-                }
-            }
-        }
     }
 }

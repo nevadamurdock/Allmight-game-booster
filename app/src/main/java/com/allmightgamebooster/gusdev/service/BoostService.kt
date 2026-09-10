@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.allmightgamebooster.gusdev.AllMightApp
 import com.allmightgamebooster.gusdev.R
 import com.allmightgamebooster.gusdev.data.BoostConfigStore
+import com.allmightgamebooster.gusdev.model.AppBoostConfig
 import com.allmightgamebooster.gusdev.model.Preset
 import com.allmightgamebooster.gusdev.model.SessionRecord
 import com.allmightgamebooster.gusdev.ui.dashboard.DashboardActivity
@@ -23,8 +24,6 @@ class BoostService : Service() {
         const val ACTION_START = "com.allmightgamebooster.gusdev.ACTION_BOOST_START"
         const val ACTION_STOP = "com.allmightgamebooster.gusdev.ACTION_BOOST_STOP"
         const val EXTRA_PACKAGE = "extra_package"
-
-        private var originalBrightness: Int = -1
 
         fun start(context: Context, pkg: String) {
             val intent = Intent(context, BoostService::class.java).apply {
@@ -45,6 +44,13 @@ class BoostService : Service() {
     private var activePackage: String? = null
     private var boostStartTime: Long = 0L
 
+    private var savedCpuGovernors = emptyMap<Int, String>()
+    private var savedGpuGovernor = ""
+    private var savedAnimationScales = Triple(1f, 1f, 1f)
+    private var savedBrightness = 128
+    private var savedAutoBrightness = 1
+    private var savedBoostPid = -1
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -64,15 +70,19 @@ class BoostService : Service() {
         BoostConfigStore.setActiveApp(this, pkg)
 
         val config = BoostConfigStore.getConfig(this, pkg)
-        val pid = ShellExecutor.getProcessPid(pkg)
+        savedBoostPid = ShellExecutor.getProcessPid(pkg)
 
         startForeground(NOTIFICATION_ID, buildNotification(pkg))
 
         if (config.preLaunchClean) {
-            ShellExecutor.killBackgroundApps()
+            ShellExecutor.getRunningApps().filter { it != pkg }.take(20).forEach {
+                ShellExecutor.forceStopApp(it)
+            }
         }
 
         if (config.governorLock) {
+            savedCpuGovernors = ShellExecutor.getCpuGovernor()
+            savedGpuGovernor = ShellExecutor.getGpuGovernor()
             ShellExecutor.setCpuGovernor("performance")
             ShellExecutor.setGpuGovernor("performance")
         }
@@ -92,7 +102,7 @@ class BoostService : Service() {
         }
 
         if (config.fpsUnlock) {
-            ShellExecutor.setSurfaceFlingerArgs()
+            ShellExecutor.unlockFps()
         }
 
         if (config.refreshRateLock) {
@@ -100,38 +110,46 @@ class BoostService : Service() {
         }
 
         if (config.brightnessLock) {
-            val currentBrightness = readCurrentBrightness()
-            originalBrightness = currentBrightness
+            savedBrightness = ShellExecutor.getBrightness()
+            savedAutoBrightness = ShellExecutor.getAutoBrightness()
+            ShellExecutor.setAutoBrightness(false)
             ShellExecutor.setBrightness(255)
         }
 
         if (config.inputLatency) {
+            savedAnimationScales = ShellExecutor.getAnimationScales()
+            ShellExecutor.setAnimationScales(0f, 0f, 0f)
             ShellExecutor.writeToFile("/proc/sys/kernel/sched_child_runs_first", "1")
             ShellExecutor.writeToFile("/proc/sys/vm/dirty_writeback_centisecs", "500")
         }
 
         if (config.renderLatency) {
-            ShellExecutor.execRoot("service call SurfaceFlinger 1034 i32 1")
+            ShellExecutor.unlockFps()
         }
 
-        if (config.processPriority && pid > 0) {
-            ShellExecutor.setTopAppPid(pid, -1000)
+        if (config.processPriority && savedBoostPid > 0) {
+            ShellExecutor.setOomScoreAdj(savedBoostPid, -1000)
+            ShellExecutor.addToDozeWhitelist(pkg)
         }
 
-        if (config.preventKill && pid > 0) {
-            ShellExecutor.setTopAppPid(pid, -900)
+        if (config.preventKill && savedBoostPid > 0) {
+            ShellExecutor.setOomScoreAdj(savedBoostPid, -900)
         }
 
-        if (config.cpuAffinity && pid > 0) {
-            ShellExecutor.setCpuAffinity(pid, 0x0F)
+        if (config.cpuAffinity && savedBoostPid > 0) {
+            ShellExecutor.moveToCpuset(savedBoostPid, "top-app")
         }
 
-        if (config.ioPriority && pid > 0) {
-            ShellExecutor.setIoPriority(pid, 2, 0)
+        if (config.ioPriority && savedBoostPid > 0) {
+            ShellExecutor.setIoPriority(savedBoostPid, 1, 0)
         }
 
         if (config.freezeBackground) {
-            ShellExecutor.killBackgroundApps()
+            val myPid = android.os.Process.myPid()
+            ShellExecutor.getRunningApps().filter { it != pkg }.forEach { otherPkg ->
+                val pid = ShellExecutor.getProcessPid(otherPkg)
+                if (pid > 0 && pid != myPid) ShellExecutor.freezeProcess(pid)
+            }
         }
 
         if (config.autoDnd) {
@@ -139,7 +157,7 @@ class BoostService : Service() {
         }
 
         if (config.lowLatencyAudio) {
-            ShellExecutor.setLowLatencyAudio(true)
+            ShellExecutor.writeToFile("/proc/sys/kernel/sched_tunable_scaling", "0")
         }
 
         if (config.screenPin) {
@@ -148,7 +166,7 @@ class BoostService : Service() {
 
         if (config.networkQos) {
             val uid = getUidForPackage(pkg)
-            if (uid > 0) ShellExecutor.setNetworkQos(uid, true)
+            if (uid > 0) ShellExecutor.setupNetworkQos(uid)
         }
 
         startService(Intent(this, OverlayService::class.java))
@@ -159,19 +177,23 @@ class BoostService : Service() {
         val config = BoostConfigStore.getConfig(this, pkg)
 
         if (config.governorLock) {
-            ShellExecutor.setCpuGovernor("schedutil")
+            savedCpuGovernors.forEach { (cpu, gov) ->
+                ShellExecutor.writeToFile("/sys/devices/system/cpu/cpu$cpu/cpufreq/scaling_governor", gov)
+            }
+            if (savedGpuGovernor.isNotBlank()) ShellExecutor.setGpuGovernor(savedGpuGovernor)
         }
 
         if (config.refreshRateLock) {
             ShellExecutor.unlockRefreshRate()
         }
 
-        if (config.brightnessLock && originalBrightness >= 0) {
-            ShellExecutor.setBrightness(originalBrightness)
-            originalBrightness = -1
+        if (config.brightnessLock) {
+            ShellExecutor.setAutoBrightness(savedAutoBrightness == 1)
+            ShellExecutor.setBrightness(savedBrightness)
         }
 
         if (config.inputLatency) {
+            ShellExecutor.setAnimationScales(savedAnimationScales.first, savedAnimationScales.second, savedAnimationScales.third)
             ShellExecutor.writeToFile("/proc/sys/kernel/sched_child_runs_first", "0")
             ShellExecutor.writeToFile("/proc/sys/vm/dirty_writeback_centisecs", "5000")
         }
@@ -180,17 +202,17 @@ class BoostService : Service() {
             deactivateDnd()
         }
 
-        if (config.lowLatencyAudio) {
-            ShellExecutor.setLowLatencyAudio(false)
-        }
-
         if (config.screenPin) {
             ShellExecutor.setScreenPinning(false)
         }
 
         if (config.networkQos) {
             val uid = getUidForPackage(pkg)
-            if (uid > 0) ShellExecutor.setNetworkQos(uid, false)
+            if (uid > 0) ShellExecutor.removeNetworkQos(uid)
+        }
+
+        if (config.processPriority) {
+            ShellExecutor.removeFromDozeWhitelist(pkg)
         }
 
         saveSession(pkg, config.preset)
@@ -198,6 +220,7 @@ class BoostService : Service() {
         stopService(Intent(this, OverlayService::class.java))
         BoostConfigStore.setActiveApp(this, null)
         activePackage = null
+        savedBoostPid = -1
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -220,17 +243,6 @@ class BoostService : Service() {
             preset = preset
         )
         BoostConfigStore.saveSession(this, record)
-    }
-
-    private fun readCurrentBrightness(): Int {
-        return try {
-            contentResolver.query(
-                android.provider.Settings.System.getUriFor("screen_brightness"),
-                null, null, null, null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) cursor.getInt(0) else 128
-            } ?: 128
-        } catch (_: Throwable) { 128 }
     }
 
     private fun activateDnd() {
@@ -258,17 +270,13 @@ class BoostService : Service() {
 
     private fun getUidForPackage(pkg: String): Int {
         return try {
-            val appInfo = packageManager.getApplicationInfo(pkg, 0)
-            appInfo.uid
+            packageManager.getApplicationInfo(pkg, 0).uid
         } catch (_: Throwable) { -1 }
     }
 
     private fun buildNotification(pkg: String): Notification {
         val intent = Intent(this, DashboardActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent, PendingIntent.FLAG_IMMUTABLE
-        )
-
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, AllMightApp.CHANNEL_BOOST)
             .setContentTitle(getString(R.string.boost_notification_title))
             .setContentText(getString(R.string.boost_notification_text, pkg))
