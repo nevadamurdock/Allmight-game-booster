@@ -19,6 +19,7 @@ class SplashActivity : AppCompatActivity() {
         setContentView(R.layout.activity_splash)
 
         Handler(Looper.getMainLooper()).postDelayed({
+            if (isFinishing) return@postDelayed
             val intent = if (BoostConfigStore.isOnboardingDone(this)) {
                 Intent(this, DashboardActivity::class.java)
             } else {
@@ -26,6 +27,6 @@ class SplashActivity : AppCompatActivity() {
             }
             startActivity(intent)
             finish()
-        }, 2000)
+        }, 2500)
     }
 }

@@ -13,6 +13,7 @@ preference = "1.2.1"
 coroutines = "1.9.0"
 mpchart = "v3.1.0"
 gson = "2.11.0"
+gif = "1.2.30"
 
 [libraries]
 libxposed-api = { group = "io.github.libxposed", name = "api", version.ref = "xposed-api" }
@@ -29,6 +30,7 @@ androidx-preference = { group = "androidx.preference", name = "preference-ktx", 
 kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpchart" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+gif = { group = "pl.droidsonroids.gif", name = "android-gif-drawable", version.ref = "gif" }
 
 [plugins]
 agp-app = { id = "com.android.application", version.ref = "agp" }

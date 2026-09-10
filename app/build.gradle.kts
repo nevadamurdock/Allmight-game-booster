@@ -83,4 +83,5 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.mpandroidchart)
     implementation(libs.gson)
+    implementation(libs.gif)
 }
