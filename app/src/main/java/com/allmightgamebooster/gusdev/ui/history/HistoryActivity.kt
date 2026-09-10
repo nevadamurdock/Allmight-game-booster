@@ -1,5 +1,6 @@
 package com.allmightgamebooster.gusdev.ui.history
 
+import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint

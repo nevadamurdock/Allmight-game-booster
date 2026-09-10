@@ -71,6 +71,8 @@ object ForegroundDetectorHook {
         if (pkg == currentForegroundPkg) return
         currentForegroundPkg = pkg
 
+        if (!isGlobalBoostEnabled()) return
+
         val config = BoostConfigStore.getConfigFromModule(pkg)
         val hasActive = config.governorLock || config.fpsUnlock ||
                 config.processPriority || config.preventKill ||
@@ -105,5 +107,15 @@ object ForegroundDetectorHook {
 
         module.log(Log.INFO, TAG, "$pkg keluar foreground -> revert()")
         TweakDispatcher.revertAll(module, pkg, config)
+    }
+
+    private fun isGlobalBoostEnabled(): Boolean {
+        return try {
+            val atClass = Class.forName("android.app.ActivityThread", false, null)
+            val app = atClass.getDeclaredMethod("currentApplication").invoke(null) as? android.content.Context
+                ?: return true
+            app.getSharedPreferences("amgb_quick_tile", android.content.Context.MODE_PRIVATE)
+                .getBoolean("boost_global_enabled", true)
+        } catch (_: Throwable) { true }
     }
 }

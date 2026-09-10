@@ -3,6 +3,7 @@ package com.allmightgamebooster.gusdev.xposed
 import android.app.NotificationManager
 import android.app.NotificationManager.Policy
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.allmightgamebooster.gusdev.model.BoostConfigData
 import com.allmightgamebooster.gusdev.util.ShellExecutor
@@ -22,9 +23,11 @@ object TweakDispatcher {
     private var savedBrightness = 128
     private var savedAutoBrightness = 1
     private var thermalThreadRunning = false
+    private var boostStartTime = 0L
 
     fun applyAll(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, pkg: String, config: BoostConfigData) {
         module.log(Log.INFO, TAG, "TweakDispatcher.applyAll($pkg)")
+        boostStartTime = System.currentTimeMillis()
         val pid = ShellExecutor.getProcessPid(pkg)
 
         // Governor
@@ -113,6 +116,9 @@ object TweakDispatcher {
             val uid = getUidForPackage(pkg)
             if (uid > 0) ShellExecutor.setupNetworkQos(uid)
         }
+
+        // Start overlay
+        startOverlay()
     }
 
     fun revertAll(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, pkg: String, config: BoostConfigData) {
@@ -142,6 +148,10 @@ object TweakDispatcher {
         }
         if (config.processPriority) ShellExecutor.removeFromDozeWhitelist(pkg)
         thermalThreadRunning = false
+
+        // Stop overlay + save session
+        stopOverlay()
+        saveSession(pkg, config)
     }
 
     private fun activateDnd() {
@@ -175,5 +185,49 @@ object TweakDispatcher {
             val app = atClass.getDeclaredMethod("currentApplication").invoke(null) as? Context ?: return -1
             app.packageManager.getApplicationInfo(pkg, 0).uid
         } catch (_: Throwable) { -1 }
+    }
+
+    private fun startOverlay() {
+        try {
+            val atClass = Class.forName("android.app.ActivityThread", false, null)
+            val app = atClass.getDeclaredMethod("currentApplication").invoke(null) as? Context ?: return
+            val intent = Intent(app, com.allmightgamebooster.gusdev.service.OverlayService::class.java)
+            app.startService(intent)
+        } catch (_: Throwable) {}
+    }
+
+    private fun stopOverlay() {
+        try {
+            val atClass = Class.forName("android.app.ActivityThread", false, null)
+            val app = atClass.getDeclaredMethod("currentApplication").invoke(null) as? Context ?: return
+            val intent = Intent(app, com.allmightgamebooster.gusdev.service.OverlayService::class.java)
+            app.stopService(intent)
+        } catch (_: Throwable) {}
+    }
+
+    private fun saveSession(pkg: String, config: BoostConfigData) {
+        try {
+            val atClass = Class.forName("android.app.ActivityThread", false, null)
+            val app = atClass.getDeclaredMethod("currentApplication").invoke(null) as? Context ?: return
+
+            val appLabel = try {
+                app.packageManager.getApplicationLabel(app.packageManager.getApplicationInfo(pkg, 0)).toString()
+            } catch (_: Throwable) { pkg }
+
+            val preset = try {
+                com.allmightgamebooster.gusdev.model.Preset.fromName(config.packageName)
+            } catch (_: Throwable) { com.allmightgamebooster.gusdev.model.Preset.BALANCED }
+
+            val record = com.allmightgamebooster.gusdev.model.SessionRecord(
+                packageName = pkg,
+                appName = appLabel,
+                startTime = boostStartTime,
+                endTime = System.currentTimeMillis(),
+                peakTemperature = com.allmightgamebooster.gusdev.service.MonitorService.peakTemperature,
+                avgFps = com.allmightgamebooster.gusdev.service.MonitorService.avgFps,
+                preset = com.allmightgamebooster.gusdev.model.Preset.BALANCED
+            )
+            com.allmightgamebooster.gusdev.data.BoostConfigStore.saveSession(app, record)
+        } catch (_: Throwable) {}
     }
 }
