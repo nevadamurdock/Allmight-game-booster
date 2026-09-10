@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AllMight" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/copper_signal</item>
+        <item name="colorPrimaryVariant">@color/copper_signal_dim</item>
+        <item name="colorOnPrimary">@color/paper_05</item>
+        <item name="colorSecondary">@color/copper_signal</item>
+        <item name="colorSecondaryVariant">@color/copper_signal_dim</item>
+        <item name="colorOnSecondary">@color/paper_05</item>
+        <item name="android:statusBarColor">@color/graphite_90</item>
+        <item name="android:navigationBarColor">@color/graphite_90</item>
+        <item name="android:windowBackground">@color/graphite_90</item>
+        <item name="android:textColorPrimary">@color/paper_05</item>
+        <item name="android:textColorSecondary">@color/steel_40</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.AllMight.Panel">
+        <item name="android:background">@color/graphite_70</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
+    <style name="Theme.AllMight.Gauge">
+        <item name="android:background">@color/graphite_70</item>
+    </style>
+
+    <style name="TextAppearance.Gauge" parent="">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textColor">@color/paper_05</item>
+        <item name="android:textSize">40sp</item>
+    </style>
+
+    <style name="TextAppearance.Label" parent="">
+        <item name="android:textColor">@color/steel_40</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+
+    <style name="TextAppearance.Readout" parent="">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textColor">@color/paper_05</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="TextAppearance.ScreenTitle" parent="">
+        <item name="android:textColor">@color/paper_05</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">medium</item>
+    </style>
+
+    <style name="Widget.AllMight.Button" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/copper_signal</item>
+        <item name="android:textColor">@color/graphite_90</item>
+        <item name="cornerRadius">8dp</item>
+    </style>
+
+    <style name="Widget.AllMight.Chip" parent="Widget.MaterialComponents.Chip.Choice">
+        <item name="chipBackgroundColor">@color/graphite_50</item>
+        <item name="android:textColor">@color/paper_05</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="checkedIconVisible">false</item>
+    </style>
+
+    <style name="Widget.AllMight.Switch">
+        <item name="thumbTint">@color/copper_signal</item>
+        <item name="trackTint">@color/graphite_50</item>
+    </style>
+
+    <style name="Widget.AllMight.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/graphite_70</item>
+        <item name="cardCornerRadius">6dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="Widget.AllMight.RecyclerView">
+        <item name="android:background">@color/graphite_90</item>
+        <item name="android:clipToPadding">false</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+</resources>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/graphite_90"
+    android:orientation="vertical">
+
+    <include layout="@layout/toolbar" />
+
+    <!-- Preset tabs -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_md"
+        android:background="@color/graphite_70">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPerformance"
+            style="@style/Widget.AllMight.Chip"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="@dimen/spacing_xs"
+            android:text="@string/preset_performance"
+            android:textAllCaps="false" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBalanced"
+            style="@style/Widget.AllMight.Chip"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="@dimen/spacing_xs"
+            android:text="@string/preset_balanced"
+            android:textAllCaps="false" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBatterySaver"
+            style="@style/Widget.AllMight.Chip"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="@dimen/spacing_xs"
+            android:text="@string/preset_battery_saver"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvFeatures"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        style="@style/Widget.AllMight.RecyclerView"
+        android:paddingTop="@dimen/spacing_sm" />
+</LinearLayout>

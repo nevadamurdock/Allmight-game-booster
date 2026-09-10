@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.appbar.MaterialToolbar
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/toolbar"
+    android:layout_width="match_parent"
+    android:layout_height="?attr/actionBarSize"
+    android:background="@color/graphite_90"
+    app:titleTextColor="@color/paper_05"
+    app:subtitleTextColor="@color/steel_40"
+    xmlns:app="http://schemas.android.com/apk/res-auto" />

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/graphite_90"
+    android:orientation="vertical">
+
+    <include layout="@layout/toolbar" />
+
+    <!-- Period filter tabs -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/spacing_md"
+        android:background="@color/graphite_70">
+        <TextView
+            android:id="@+id/tvTabToday"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/history_today"
+            android:textColor="@color/copper_signal"
+            android:textSize="@dimen/text_body" />
+        <TextView
+            android:id="@+id/tvTabWeek"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/history_week"
+            android:textColor="@color/steel_40"
+            android:textSize="@dimen/text_body" />
+        <TextView
+            android:id="@+id/tvTabMonth"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/history_month"
+            android:textColor="@color/steel_40"
+            android:textSize="@dimen/text_body" />
+    </LinearLayout>
+
+    <!-- Chart area -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:padding="@dimen/spacing_md">
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/chartSessions"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
+    <!-- Session list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvSessions"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        style="@style/Widget.AllMight.RecyclerView" />
+</LinearLayout>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/graphite_90"
+    android:orientation="vertical">
+
+    <include layout="@layout/toolbar" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:id="@+id/dashboardContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_md">
+
+            <!-- Empty state -->
+            <LinearLayout
+                android:id="@+id/emptyState"
+                android:layout_width="match_parent"
+                android:layout_height="400dp"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="visible">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/no_active_boost"
+                    android:textColor="@color/steel_40"
+                    android:textSize="@dimen/text_body"
+                    android:textAlignment="center" />
+                <Button
+                    android:id="@+id/btnPickApp"
+                    style="@style/Widget.AllMight.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:text="@string/pick_app_boost"
+                    android:textSize="@dimen/text_label" />
+            </LinearLayout>
+
+            <!-- Active boost state -->
+            <LinearLayout
+                android:id="@+id/activeState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- App name + preset chip -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="@dimen/spacing_md">
+                    <TextView
+                        android:id="@+id/tvActiveApp"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="@color/paper_05"
+                        android:textSize="@dimen/text_title"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/tvActivePreset"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@color/graphite_50"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="@color/copper_signal"
+                        android:textSize="@dimen/text_label" />
+                </LinearLayout>
+
+                <!-- Gauge row: Temperature + Clock -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="@dimen/spacing_md">
+
+                    <FrameLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="@dimen/spacing_sm">
+                        <com.allmightgamebooster.gusdev.ui.widget.RadialGaugeView
+                            android:id="@+id/gaugeTemperature"
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/gauge_size_large"
+                            android:background="@color/graphite_70" />
+                    </FrameLayout>
+
+                    <FrameLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="@dimen/spacing_sm">
+                        <com.allmightgamebooster.gusdev.ui.widget.RadialGaugeView
+                            android:id="@+id/gaugeClock"
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/gauge_size_large"
+                            android:background="@color/graphite_70" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- Readout row: RAM · IO · FPS -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/graphite_70"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/spacing_sm"
+                    android:layout_marginBottom="@dimen/spacing_md">
+
+                    <TextView
+                        android:id="@+id/tvRamReadout"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="monospace"
+                        android:gravity="center"
+                        android:textColor="@color/paper_05"
+                        android:textSize="@dimen/text_body" />
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:background="@color/graphite_50" />
+                    <TextView
+                        android:id="@+id/tvIoReadout"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="monospace"
+                        android:gravity="center"
+                        android:textColor="@color/paper_05"
+                        android:textSize="@dimen/text_body" />
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:background="@color/graphite_50" />
+                    <TextView
+                        android:id="@+id/tvFpsReadout"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="monospace"
+                        android:gravity="center"
+                        android:textColor="@color/paper_05"
+                        android:textSize="@dimen/text_body" />
+                </LinearLayout>
+
+                <!-- Stop button -->
+                <Button
+                    android:id="@+id/btnStopBoost"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:backgroundTint="@color/redline_alert"
+                    android:text="Hentikan Boost"
+                    android:textColor="@color/paper_05" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

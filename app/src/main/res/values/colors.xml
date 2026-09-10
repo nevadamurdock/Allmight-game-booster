@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="graphite_90">#FF1B1D1F</color>
+    <color name="graphite_70">#FF2A2D30</color>
+    <color name="graphite_60">#FF353839</color>
+    <color name="graphite_50">#FF44474A</color>
+    <color name="steel_40">#FF8C949C</color>
+    <color name="steel_30">#FFB0B5BB</color>
+    <color name="paper_05">#FFEDEBE6</color>
+    <color name="copper_signal">#FFC97A4A</color>
+    <color name="copper_signal_dim">#99C97A4A</color>
+    <color name="redline_alert">#FFC13B3B</color>
+    <color name="redline_alert_dim">#33C13B3B</color>
+    <color name="transparent">#00000000</color>
+    <color name="overlay_bg">#CC1B1D1F</color>
+</resources>
