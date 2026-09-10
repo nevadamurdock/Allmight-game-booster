@@ -3,7 +3,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.agp.app)
-    alias(libs.plugins.kotlin.android)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
