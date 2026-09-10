@@ -18,22 +18,28 @@
     <application
         android:name=".AllMightApp"
         android:allowBackup="false"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AllMight"
         tools:targetApi="35">
 
         <activity
-            android:name=".ui.onboarding.OnboardingActivity"
+            android:name=".ui.splash.SplashActivity"
             android:exported="true"
-            android:theme="@style/Theme.AllMight">
+            android:theme="@style/Theme.AllMight"
+            android:windowSoftInputMode="stateHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.onboarding.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AllMight" />
 
         <activity
             android:name=".ui.dashboard.DashboardActivity"
