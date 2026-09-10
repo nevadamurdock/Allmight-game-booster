@@ -5,29 +5,25 @@ import android.os.IBinder
 import android.util.Log
 import com.allmightgamebooster.gusdev.data.BoostConfigStore
 import com.allmightgamebooster.gusdev.util.ShellExecutor
-import io.github.libxposed.api.XposedModuleInterface.PackageLoadedParam
+import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
 
 /**
  * Fondasi deteksi app masuk/keluar foreground, dipasang di scope "android" (system_server).
- * Semua fitur boost (governor, freeze, overlay, dsb) dipicu dari sini lewat
- * TweakDispatcher.applyAll() / revertAll().
- *
- * Catatan: signature updateActivityUsageStats() bisa beda antar versi Android/vendor.
- * Kalau hook gagal di device tertentu, cek signature asli lewat dex inspection.
+ * Semua fitur boost dipicu dari sini lewat TweakDispatcher.applyAll() / revertAll().
  */
 object ForegroundDetectorHook {
 
     private const val TAG = "AllMight"
     private var currentForegroundPkg: String? = null
 
-    fun init(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, param: PackageLoadedParam) {
-        if (param.packageName != "android") return
+    fun init(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, param: SystemServerStartingParam) {
+        module.log(Log.INFO, TAG, "ForegroundDetector: initializing")
 
         try {
             val amsClass = Class.forName(
                 "com.android.server.am.ActivityManagerService",
                 false,
-                param.defaultClassLoader
+                param.classLoader
             )
 
             val method = amsClass.declaredMethods.firstOrNull { m ->
@@ -50,7 +46,6 @@ object ForegroundDetectorHook {
                     val event = chain.args[2] as? Int ?: return@intercept chain.proceed()
                     val pkg = component.packageName
 
-                    // UsageEvents.Event.MOVE_TO_FOREGROUND = 1, MOVE_TO_BACKGROUND = 2
                     when (event) {
                         1 -> onForeground(module, pkg)
                         2 -> onBackground(module, pkg)
@@ -61,7 +56,7 @@ object ForegroundDetectorHook {
                 chain.proceed()
             }
 
-            module.log(Log.INFO, TAG, "ForegroundDetector: hooked")
+            module.log(Log.INFO, TAG, "ForegroundDetector: hooked successfully")
         } catch (e: Throwable) {
             module.log(Log.ERROR, TAG, "ForegroundDetector hook failed: ${e.message}")
         }

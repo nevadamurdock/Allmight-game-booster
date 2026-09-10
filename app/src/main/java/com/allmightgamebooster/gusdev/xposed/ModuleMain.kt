@@ -31,10 +31,6 @@ class ModuleMain : XposedModule() {
         val pkg = param.packageName
         log(Log.INFO, TAG, "Package loaded: $pkg")
 
-        if (pkg == "android") {
-            ForegroundDetectorHook.init(this, param)
-        }
-
         applyRootHideHooks(param)
     }
 
@@ -43,7 +39,8 @@ class ModuleMain : XposedModule() {
     }
 
     override fun onSystemServerStarting(param: SystemServerStartingParam) {
-        log(Log.INFO, TAG, "System server starting")
+        log(Log.INFO, TAG, "System server starting — init ForegroundDetector")
+        ForegroundDetectorHook.init(this, param)
     }
 
     // ── Root Hide (PRD §21) ──────────────────────────────────
