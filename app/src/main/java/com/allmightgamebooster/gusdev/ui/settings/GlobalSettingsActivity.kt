@@ -72,7 +72,7 @@ class GlobalSettingsActivity : AppCompatActivity() {
             tvVersion.text = "v1.0.0"
         }
 
-        tvModuleStatus.text = if (isModuleActive()) "Modul aktif" else "Modul belum aktif — aktifkan di LSPosed"
+        tvModuleStatus.text = if (isModuleActive()) "Modul aktif" else "Modul belum aktif — aktifkan di LSPosed + reboot"
 
         findViewById<android.view.View>(R.id.btnManagePermissions)?.setOnClickListener {
             startActivity(Intent(this, OnboardingActivity::class.java))
@@ -81,8 +81,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun isModuleActive(): Boolean {
         return try {
-            Class.forName("io.github.libxposed.api.XposedModule")
-            true
+            val aFile = java.io.File(codeSource?.file?.replace("!/classes.dex", "")
+                ?.replace("file:", "") ?: return false, "META-INF/xposed/module.prop")
+            aFile.exists()
         } catch (_: Throwable) {
             false
         }
