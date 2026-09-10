@@ -81,9 +81,9 @@ class GlobalSettingsActivity : AppCompatActivity() {
 
     private fun isModuleActive(): Boolean {
         return try {
-            val aFile = java.io.File(codeSource?.file?.replace("!/classes.dex", "")
-                ?.replace("file:", "") ?: return false, "META-INF/xposed/module.prop")
-            aFile.exists()
+            val apkPath = applicationInfo.sourceDir
+            val metaFile = java.io.File(apkPath, "META-INF/xposed/module.prop")
+            metaFile.exists()
         } catch (_: Throwable) {
             false
         }
