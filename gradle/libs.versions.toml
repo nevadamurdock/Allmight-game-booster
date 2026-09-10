@@ -1,7 +1,6 @@
 [versions]
 agp = "9.1.0"
-xposed-api = "102.0.0"
-xposed-service = "102.0.0"
+xposed-api = "82"
 core-ktx = "1.15.0"
 appcompat = "1.7.0"
 material = "1.12.0"
@@ -16,12 +15,12 @@ gson = "2.11.0"
 gif = "1.2.30"
 
 [libraries]
-libxposed-api = { group = "io.github.libxposed", name = "api", version.ref = "xposed-api" }
-libxposed-service = { group = "io.github.libxposed", name = "service", version.ref = "xposed-service" }
+libxposed-api = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed-api" }
+libxposed-api-sources = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed-api" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version = "constraintlayout" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 androidx-cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
@@ -30,7 +29,7 @@ androidx-preference = { group = "androidx.preference", name = "preference-ktx", 
 kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpchart" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
-gif = { group = "pl.droidsonroids.gif", name = "android-gif-drawable", version.ref = "gif" }
+gif = { group = "pl.droidsonroids.gif", name = "android-gif-drawable", version = "gif" }
 
 [plugins]
 agp-app = { id = "com.android.application", version.ref = "agp" }

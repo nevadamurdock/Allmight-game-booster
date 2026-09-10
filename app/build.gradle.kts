@@ -62,7 +62,6 @@ android {
 
     packaging {
         resources {
-            merges += "META-INF/xposed/*"
             excludes += "**"
         }
     }
@@ -70,7 +69,6 @@ android {
 
 dependencies {
     compileOnly(libs.libxposed.api)
-    implementation(libs.libxposed.service)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

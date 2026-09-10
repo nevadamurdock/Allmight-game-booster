@@ -4,114 +4,93 @@ import android.content.ComponentName
 import android.os.IBinder
 import android.util.Log
 import com.allmightgamebooster.gusdev.data.BoostConfigStore
-import com.allmightgamebooster.gusdev.util.ShellExecutor
-import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
+import de.robv.android.xposed.XposedHelpers
+import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * Fondasi deteksi app masuk/keluar foreground, dipasang di scope "android" (system_server).
- * Semua fitur boost dipicu dari sini lewat TweakDispatcher.applyAll() / revertAll().
+ * Fondasi deteksi app masuk/keluar foreground.
+ * Dipasang di scope "android" (system_server) via handleLoadPackage.
  */
 object ForegroundDetectorHook {
 
     private const val TAG = "AllMight"
     private var currentForegroundPkg: String? = null
 
-    fun init(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, param: SystemServerStartingParam) {
-        module.log(Log.INFO, TAG, "ForegroundDetector: initializing")
+    fun init(classLoader: ClassLoader) {
+        XposedBridge.log("[$TAG] ForegroundDetector: initializing")
 
         try {
-            // Coba beberapa classloader untuk temukan AMS
-            val classloaders = listOf(
-                param.classLoader,
-                ClassLoader.getSystemClassLoader(),
-                Thread.currentThread().contextClassLoader
-            ).filterNotNull()
+            val amsClass = Class.forName(
+                "com.android.server.am.ActivityManagerService",
+                false,
+                classLoader
+            )
 
-            var amsClass: Class<*>? = null
-            for (cl in classloaders) {
-                try {
-                    amsClass = Class.forName(
-                        "com.android.server.am.ActivityManagerService",
-                        false,
-                        cl
-                    )
-                    module.log(Log.INFO, TAG, "ForegroundDetector: AMS found via ${cl.javaClass.simpleName}")
-                    break
-                } catch (_: ClassNotFoundException) {}
-            }
-
-            if (amsClass == null) {
-                module.log(Log.ERROR, TAG, "ForegroundDetector: AMS class not found in any classloader")
-                return
-            }
-
+            // Cari method dengan signature yang benar
             val method = amsClass.declaredMethods.firstOrNull { m ->
                 m.name == "updateActivityUsageStats" &&
                         m.parameterTypes.size == 5 &&
-                        m.parameterTypes[0] == ComponentName::class.java &&
-                        m.parameterTypes[3] == IBinder::class.java
+                        m.parameterTypes[0] == ComponentName::class.java
             }
 
             if (method == null) {
-                // Coba signature alternatif (3 params)
+                // Fallback: coba 3-param signature
                 val altMethod = amsClass.declaredMethods.firstOrNull { m ->
                     m.name == "updateActivityUsageStats" &&
                             m.parameterTypes.size == 3 &&
                             m.parameterTypes[0] == ComponentName::class.java
                 }
-
                 if (altMethod == null) {
-                    module.log(Log.ERROR, TAG, "ForegroundDetector: updateActivityUsageStats not found")
-                    val methods = amsClass.declaredMethods.filter { it.name.contains("Usage") || it.name.contains("Activity") }
-                    module.log(Log.INFO, TAG, "Available methods: ${methods.joinToString { it.name }}")
+                    XposedBridge.log("[$TAG] ForegroundDetector: method not found")
+                    val candidates = amsClass.declaredMethods.filter {
+                        it.name.contains("Usage") || it.name.contains("Activity")
+                    }.map { "${it.name}(${it.parameterTypes.joinToString { it.simpleName }})" }
+                    XposedBridge.log("[$TAG] Candidates: $candidates")
                     return
                 }
-
-                altMethod.isAccessible = true
-                module.hook(altMethod).intercept { chain ->
-                    try {
-                        val component = chain.args[0] as? ComponentName ?: return@intercept chain.proceed()
-                        val pkg = component.packageName
-                        val event = chain.args[1] as? Int ?: return@intercept chain.proceed()
-                        when (event) {
-                            1 -> onForeground(module, pkg)
-                            2 -> onBackground(module, pkg)
-                        }
-                    } catch (e: Throwable) {
-                        module.log(Log.ERROR, TAG, "ForegroundDetector error: ${e.message}")
-                    }
-                    chain.proceed()
-                }
-                module.log(Log.INFO, TAG, "ForegroundDetector: hooked (3-param signature)")
+                hookMethod(altMethod, isThreeParam = true)
                 return
             }
 
-            method.isAccessible = true
-            module.hook(method).intercept { chain ->
-                try {
-                    val component = chain.args[0] as? ComponentName ?: return@intercept chain.proceed()
-                    val event = chain.args[2] as? Int ?: return@intercept chain.proceed()
-                    val pkg = component.packageName
-                    when (event) {
-                        1 -> onForeground(module, pkg)
-                        2 -> onBackground(module, pkg)
-                    }
-                } catch (e: Throwable) {
-                    module.log(Log.ERROR, TAG, "ForegroundDetector error: ${e.message}")
-                }
-                chain.proceed()
-            }
-            module.log(Log.INFO, TAG, "ForegroundDetector: hooked (5-param signature)")
+            hookMethod(method, isThreeParam = false)
         } catch (e: Throwable) {
-            module.log(Log.ERROR, TAG, "ForegroundDetector hook failed: ${e.message}")
+            XposedBridge.log("[$TAG] ForegroundDetector hook failed: ${e.message}")
         }
     }
 
-    private fun onForeground(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, pkg: String) {
+    private fun hookMethod(method: java.lang.reflect.Method, isThreeParam: Boolean) {
+        method.isAccessible = true
+
+        XposedBridge.hookMethod(method, object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                try {
+                    val component = param.args[0] as? ComponentName ?: return
+                    val event = if (isThreeParam) {
+                        param.args[1] as? Int ?: return
+                    } else {
+                        param.args[2] as? Int ?: return
+                    }
+                    val pkg = component.packageName
+
+                    when (event) {
+                        1 -> onForeground(pkg)
+                        2 -> onBackground(pkg)
+                    }
+                } catch (e: Throwable) {
+                    XposedBridge.log("[$TAG] ForegroundDetector error: ${e.message}")
+                }
+            }
+        })
+
+        val sig = if (isThreeParam) "3-param" else "5-param"
+        XposedBridge.log("[$TAG] ForegroundDetector: hooked ($sig signature)")
+    }
+
+    private fun onForeground(pkg: String) {
         if (pkg == currentForegroundPkg) return
         currentForegroundPkg = pkg
-
-        if (!isGlobalBoostEnabled()) return
 
         val config = BoostConfigStore.getConfigFromModule(pkg)
         val hasActive = config.governorLock || config.fpsUnlock ||
@@ -125,11 +104,11 @@ object ForegroundDetectorHook {
 
         if (!hasActive) return
 
-        module.log(Log.INFO, TAG, "$pkg masuk foreground -> apply()")
-        TweakDispatcher.applyAll(module, pkg, config)
+        XposedBridge.log("[$TAG] $pkg masuk foreground -> apply()")
+        TweakDispatcher.applyAll(pkg, config)
     }
 
-    private fun onBackground(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, pkg: String) {
+    private fun onBackground(pkg: String) {
         if (pkg != currentForegroundPkg) return
         currentForegroundPkg = null
 
@@ -145,17 +124,7 @@ object ForegroundDetectorHook {
 
         if (!hasActive) return
 
-        module.log(Log.INFO, TAG, "$pkg keluar foreground -> revert()")
-        TweakDispatcher.revertAll(module, pkg, config)
-    }
-
-    private fun isGlobalBoostEnabled(): Boolean {
-        return try {
-            val atClass = Class.forName("android.app.ActivityThread", false, null)
-            val app = atClass.getDeclaredMethod("currentApplication").invoke(null) as? android.content.Context
-                ?: return true
-            app.getSharedPreferences("amgb_quick_tile", android.content.Context.MODE_PRIVATE)
-                .getBoolean("boost_global_enabled", true)
-        } catch (_: Throwable) { true }
+        XposedBridge.log("[$TAG] $pkg keluar foreground -> revert()")
+        TweakDispatcher.revertAll(pkg, config)
     }
 }

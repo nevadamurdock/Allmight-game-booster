@@ -1,94 +1,98 @@
 package com.allmightgamebooster.gusdev.xposed
 
+import android.content.ComponentName
+import android.os.IBinder
 import android.util.Log
-import io.github.libxposed.api.XposedModule
-import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
-import io.github.libxposed.api.XposedModuleInterface.PackageLoadedParam
-import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
-import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
+import de.robv.android.xposed.IXposedHookLoadPackage
+import de.robv.android.xposed.IXposedHookZygoteInit
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XposedBridge
+import de.robv.android.xposed.XposedHelpers
+import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-class ModuleMain : XposedModule() {
+class ModuleMain : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
         const val TAG = "AllMight"
-        private val ROOT_PATHS = listOf(
-            "/su/bin/su", "/system/xbin/su", "/system/bin/su",
-            "/sbin/su", "/data/local/xbin/su", "/data/local/bin/su",
-            "/system/sd/xbin/su", "/system/bin/failsafe/su",
-            "/data/local/su", "/su/bin/supolicy",
-            "/dev/socket/su daemon", "/system/app/Superuser.apk",
-            "/system/app/SuperSU.apk", "/data/adb/magisk",
-            "/sbin/.magisk", "/data/adb/modules"
-        )
     }
 
-    override fun onModuleLoaded(param: ModuleLoadedParam) {
-        log(Log.INFO, TAG, "All Might Game Booster loaded in: ${param.processName}")
-        log(Log.INFO, TAG, "framework: $frameworkName ($frameworkVersionCode) API $apiVersion")
+    override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam?) {
+        XposedBridge.log("[$TAG] Module initialized in Zygote")
     }
 
-    override fun onPackageLoaded(param: PackageLoadedParam) {
-        val pkg = param.packageName
-        log(Log.INFO, TAG, "Package loaded: $pkg")
+    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+        val pkg = lpparam.packageName
 
-        applyRootHideHooks(param)
+        // Root hide hooks di dalam proses target app
+        applyRootHideHooks(lpparam)
+
+        // ForegroundDetector hanya di system_server
+        if (pkg == "android") {
+            ForegroundDetectorHook.init(lpparam.classLoader)
+        }
     }
 
-    override fun onPackageReady(param: PackageReadyParam) {
-        log(Log.INFO, TAG, "Package ready: ${param.packageName}")
-    }
+    // ── Root Hide (PRD §21) ──────────────────────────────────────
 
-    override fun onSystemServerStarting(param: SystemServerStartingParam) {
-        log(Log.INFO, TAG, "System server starting — init ForegroundDetector")
-        ForegroundDetectorHook.init(this, param)
-    }
-
-    // ── Root Hide (PRD §21) ──────────────────────────────────
-
-    private fun applyRootHideHooks(param: PackageLoadedParam) {
-        val pkg = param.packageName
+    private fun applyRootHideHooks(lpparam: XC_LoadPackage.LoadPackageParam) {
+        val pkg = lpparam.packageName
         val hiddenPackages = try {
             com.allmightgamebooster.gusdev.util.RootHideConfig.getHiddenPackages()
         } catch (_: Throwable) { emptySet() }
 
         if (pkg !in hiddenPackages) return
-        log(Log.INFO, TAG, "Hiding root for: $pkg")
+        XposedBridge.log("[$TAG] Hiding root for: $pkg")
 
         try {
-            val buildClass = Class.forName("android.os.Build", false, param.defaultClassLoader)
-            val tagField = buildClass.getDeclaredField("TAG")
-            tagField.isAccessible = true
-            tagField.set(null, "Android")
-
-            hookRootIndicators(param)
+            val buildClass = Class.forName("android.os.Build", false, lpparam.classLoader)
+            XposedHelpers.setStaticObjectField(buildClass, "TAG", "Android")
+            hookRootIndicators(lpparam)
         } catch (e: Throwable) {
-            log(Log.ERROR, TAG, "Root hide failed: ${e.message}")
+            XposedBridge.log("[$TAG] Root hide failed: ${e.message}")
         }
     }
 
-    private fun hookRootIndicators(param: PackageLoadedParam) {
+    private fun hookRootIndicators(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
-            val fileClass = Class.forName("java.io.File", false, param.defaultClassLoader)
+            val fileClass = Class.forName("java.io.File", false, lpparam.classLoader)
+            val rootPaths = listOf(
+                "/su/bin/su", "/system/xbin/su", "/system/bin/su",
+                "/sbin/su", "/data/local/xbin/su", "/data/local/bin/su",
+                "/system/sd/xbin/su", "/system/bin/failsafe/su",
+                "/data/local/su", "/su/bin/supolicy",
+                "/dev/socket/su daemon", "/system/app/Superuser.apk",
+                "/system/app/SuperSU.apk", "/data/adb/magisk",
+                "/sbin/.magisk", "/data/adb/modules"
+            )
 
-            hook(fileClass.getMethod("exists")).intercept { chain ->
-                val path = (chain.thisObject as java.io.File).absolutePath
-                if (ROOT_PATHS.any { path.contains(it, ignoreCase = true) }) false
-                else chain.proceed()
-            }
+            XposedHelpers.findAndHookMethod(fileClass, "exists", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val path = (param.thisObject as java.io.File).absolutePath
+                    if (rootPaths.any { path.contains(it, ignoreCase = true) }) {
+                        param.result = false
+                    }
+                }
+            })
 
-            hook(fileClass.getMethod("canExecute")).intercept { chain ->
-                val path = (chain.thisObject as java.io.File).absolutePath
-                if (ROOT_PATHS.any { path.contains(it, ignoreCase = true) }) false
-                else chain.proceed()
-            }
+            XposedHelpers.findAndHookMethod(fileClass, "canExecute", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val path = (param.thisObject as java.io.File).absolutePath
+                    if (rootPaths.any { path.contains(it, ignoreCase = true) }) {
+                        param.result = false
+                    }
+                }
+            })
 
-            hook(fileClass.getMethod("isFile")).intercept { chain ->
-                val path = (chain.thisObject as java.io.File).absolutePath
-                if (ROOT_PATHS.any { path.contains(it, ignoreCase = true) }) false
-                else chain.proceed()
-            }
+            XposedHelpers.findAndHookMethod(fileClass, "isFile", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val path = (param.thisObject as java.io.File).absolutePath
+                    if (rootPaths.any { path.contains(it, ignoreCase = true) }) {
+                        param.result = false
+                    }
+                }
+            })
         } catch (e: Throwable) {
-            log(Log.ERROR, TAG, "File hook error: ${e.message}")
+            XposedBridge.log("[$TAG] File hook error: ${e.message}")
         }
     }
 }

@@ -4,15 +4,13 @@ import android.app.NotificationManager
 import android.app.NotificationManager.Policy
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import com.allmightgamebooster.gusdev.model.BoostConfigData
+import com.allmightgamebooster.gusdev.model.Preset
+import com.allmightgamebooster.gusdev.model.SessionRecord
+import com.allmightgamebooster.gusdev.service.MonitorService
 import com.allmightgamebooster.gusdev.util.ShellExecutor
+import de.robv.android.xposed.XposedBridge
 
-/**
- * Titik orkestrasi tunggal yang dipanggil ForegroundDetectorHook.
- * PresetManager menentukan Tweak mana yang aktif sesuai preset,
- * lalu apply/revert masing-masing dari sini.
- */
 object TweakDispatcher {
 
     private const val TAG = "AllMight"
@@ -22,15 +20,13 @@ object TweakDispatcher {
     private var savedAnimationScales = Triple(1f, 1f, 1f)
     private var savedBrightness = 128
     private var savedAutoBrightness = 1
-    private var thermalThreadRunning = false
     private var boostStartTime = 0L
 
-    fun applyAll(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, pkg: String, config: BoostConfigData) {
-        module.log(Log.INFO, TAG, "TweakDispatcher.applyAll($pkg)")
+    fun applyAll(pkg: String, config: BoostConfigData) {
+        XposedBridge.log("[$TAG] TweakDispatcher.applyAll($pkg)")
         boostStartTime = System.currentTimeMillis()
         val pid = ShellExecutor.getProcessPid(pkg)
 
-        // Governor
         if (config.governorLock) {
             savedGovernors = ShellExecutor.getCpuGovernor()
             savedGpuGovernor = ShellExecutor.getGpuGovernor()
@@ -39,10 +35,9 @@ object TweakDispatcher {
         }
 
         if (config.adaptiveThermal) {
-            thermalThreadRunning = true
             Thread {
                 var checks = 0
-                while (thermalThreadRunning && checks < 600) {
+                while (ShellExecutor.readFromFile("/proc/$pid/status").isNotBlank() && checks < 600) {
                     val temp = ShellExecutor.getThermalTemp()
                     when {
                         temp > 45f -> ShellExecutor.setCpuGovernor("schedutil")
@@ -52,11 +47,9 @@ object TweakDispatcher {
                     checks++
                     Thread.sleep(3000)
                 }
-                thermalThreadRunning = false
             }.start()
         }
 
-        // Process
         if (config.processPriority && pid > 0) {
             ShellExecutor.setOomScoreAdj(pid, -1000)
             ShellExecutor.addToDozeWhitelist(pkg)
@@ -70,8 +63,6 @@ object TweakDispatcher {
         if (config.ioPriority && pid > 0) {
             ShellExecutor.setIoPriority(pid, 1, 0)
         }
-
-        // Display
         if (config.fpsUnlock) ShellExecutor.unlockFps()
         if (config.refreshRateLock) ShellExecutor.setRefreshRate(120)
 
@@ -82,7 +73,6 @@ object TweakDispatcher {
             ShellExecutor.setBrightness(255)
         }
 
-        // Latency
         if (config.inputLatency) {
             savedAnimationScales = ShellExecutor.getAnimationScales()
             ShellExecutor.setAnimationScales(0f, 0f, 0f)
@@ -91,7 +81,6 @@ object TweakDispatcher {
         }
         if (config.renderLatency) ShellExecutor.unlockFps()
 
-        // Freeze
         if (config.freezeBackground) {
             val myPid = android.os.Process.myPid()
             ShellExecutor.getRunningApps().filter { it != pkg }.take(20).forEach { other ->
@@ -100,29 +89,19 @@ object TweakDispatcher {
             }
         }
 
-        // DND
         if (config.autoDnd) activateDnd()
-
-        // Audio
-        if (config.lowLatencyAudio) {
-            ShellExecutor.writeToFile("/proc/sys/kernel/sched_tunable_scaling", "0")
-        }
-
-        // Screen Pin
+        if (config.lowLatencyAudio) ShellExecutor.writeToFile("/proc/sys/kernel/sched_tunable_scaling", "0")
         if (config.screenPin) ShellExecutor.setScreenPinning(true)
-
-        // Network
         if (config.networkQos) {
             val uid = getUidForPackage(pkg)
             if (uid > 0) ShellExecutor.setupNetworkQos(uid)
         }
 
-        // Start overlay
         startOverlay()
     }
 
-    fun revertAll(module: com.allmightgamebooster.gusdev.xposed.ModuleMain, pkg: String, config: BoostConfigData) {
-        module.log(Log.INFO, TAG, "TweakDispatcher.revertAll($pkg)")
+    fun revertAll(pkg: String, config: BoostConfigData) {
+        XposedBridge.log("[$TAG] TweakDispatcher.revertAll($pkg)")
 
         if (config.governorLock) {
             savedGovernors.forEach { (cpu, gov) ->
@@ -147,9 +126,7 @@ object TweakDispatcher {
             if (uid > 0) ShellExecutor.removeNetworkQos(uid)
         }
         if (config.processPriority) ShellExecutor.removeFromDozeWhitelist(pkg)
-        thermalThreadRunning = false
 
-        // Stop overlay + save session
         stopOverlay()
         saveSession(pkg, config)
     }
@@ -205,7 +182,7 @@ object TweakDispatcher {
         } catch (_: Throwable) {}
     }
 
-    private fun saveSession(pkg: String, config: BoostConfigData) {
+    private fun saveSession(pkg: String, preset: BoostConfigData) {
         try {
             val atClass = Class.forName("android.app.ActivityThread", false, null)
             val app = atClass.getDeclaredMethod("currentApplication").invoke(null) as? Context ?: return
@@ -214,18 +191,14 @@ object TweakDispatcher {
                 app.packageManager.getApplicationLabel(app.packageManager.getApplicationInfo(pkg, 0)).toString()
             } catch (_: Throwable) { pkg }
 
-            val preset = try {
-                com.allmightgamebooster.gusdev.model.Preset.fromName(config.packageName)
-            } catch (_: Throwable) { com.allmightgamebooster.gusdev.model.Preset.BALANCED }
-
-            val record = com.allmightgamebooster.gusdev.model.SessionRecord(
+            val record = SessionRecord(
                 packageName = pkg,
                 appName = appLabel,
                 startTime = boostStartTime,
                 endTime = System.currentTimeMillis(),
-                peakTemperature = com.allmightgamebooster.gusdev.service.MonitorService.peakTemperature,
-                avgFps = com.allmightgamebooster.gusdev.service.MonitorService.avgFps,
-                preset = com.allmightgamebooster.gusdev.model.Preset.BALANCED
+                peakTemperature = MonitorService.peakTemperature,
+                avgFps = MonitorService.avgFps,
+                preset = Preset.BALANCED
             )
             com.allmightgamebooster.gusdev.data.BoostConfigStore.saveSession(app, record)
         } catch (_: Throwable) {}
