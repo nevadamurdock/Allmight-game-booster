@@ -11,8 +11,8 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="@dimen/spacing_md"
-        android:background="@color/graphite_70"
+        android:layout_marginHorizontal="@dimen/spacing_md"
+        android:layout_marginTop="@dimen/spacing_sm"
         app:boxStrokeColor="@color/copper_signal"
         xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -23,6 +23,7 @@
             android:hint="@string/search_app"
             android:textColorHint="@color/steel_40"
             android:textColor="@color/paper_05"
+            android:textSize="@dimen/text_body"
             android:backgroundTint="@color/copper_signal" />
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -34,14 +35,20 @@
         android:paddingVertical="@dimen/spacing_sm"
         android:text="@string/show_system_apps"
         android:textColor="@color/steel_40"
-        android:textSize="@dimen/text_label"
+        android:textSize="@dimen/text_small"
         app:thumbTint="@color/copper_signal"
         app:trackTint="@color/graphite_50"
         xmlns:app="http://schemas.android.com/apk/res-auto" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/graphite_50" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvApps"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        style="@style/Widget.AllMight.RecyclerView" />
+        android:clipToPadding="false"
+        android:paddingBottom="@dimen/spacing_sm" />
 </LinearLayout>
