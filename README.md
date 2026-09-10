@@ -34,11 +34,6 @@ Xposed/LSPosed module untuk optimasi performa Android secara generik per-app.
 - LSPosed with modern Xposed API 102 support
 - Module diaktifkan di LSPosed scope
 
-## Build
-
-Push ke branch `main` — APK akan otomatis ter-build via GitHub Actions.
-Hasilnya bisa di-download di tab **Actions** → pilih workflow run → **Artifacts**.
-
 ## Instalasi
 
 1. Download APK dari Artifacts atau build lokal
