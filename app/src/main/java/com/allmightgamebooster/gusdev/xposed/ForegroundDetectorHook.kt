@@ -20,11 +20,30 @@ object ForegroundDetectorHook {
         module.log(Log.INFO, TAG, "ForegroundDetector: initializing")
 
         try {
-            val amsClass = Class.forName(
-                "com.android.server.am.ActivityManagerService",
-                false,
-                param.classLoader
-            )
+            // Coba beberapa classloader untuk temukan AMS
+            val classloaders = listOf(
+                param.classLoader,
+                ClassLoader.getSystemClassLoader(),
+                Thread.currentThread().contextClassLoader
+            ).filterNotNull()
+
+            var amsClass: Class<*>? = null
+            for (cl in classloaders) {
+                try {
+                    amsClass = Class.forName(
+                        "com.android.server.am.ActivityManagerService",
+                        false,
+                        cl
+                    )
+                    module.log(Log.INFO, TAG, "ForegroundDetector: AMS found via ${cl.javaClass.simpleName}")
+                    break
+                } catch (_: ClassNotFoundException) {}
+            }
+
+            if (amsClass == null) {
+                module.log(Log.ERROR, TAG, "ForegroundDetector: AMS class not found in any classloader")
+                return
+            }
 
             val method = amsClass.declaredMethods.firstOrNull { m ->
                 m.name == "updateActivityUsageStats" &&
@@ -34,18 +53,45 @@ object ForegroundDetectorHook {
             }
 
             if (method == null) {
-                module.log(Log.ERROR, TAG, "ForegroundDetector: updateActivityUsageStats not found")
+                // Coba signature alternatif (3 params)
+                val altMethod = amsClass.declaredMethods.firstOrNull { m ->
+                    m.name == "updateActivityUsageStats" &&
+                            m.parameterTypes.size == 3 &&
+                            m.parameterTypes[0] == ComponentName::class.java
+                }
+
+                if (altMethod == null) {
+                    module.log(Log.ERROR, TAG, "ForegroundDetector: updateActivityUsageStats not found")
+                    val methods = amsClass.declaredMethods.filter { it.name.contains("Usage") || it.name.contains("Activity") }
+                    module.log(Log.INFO, TAG, "Available methods: ${methods.joinToString { it.name }}")
+                    return
+                }
+
+                altMethod.isAccessible = true
+                module.hook(altMethod).intercept { chain ->
+                    try {
+                        val component = chain.args[0] as? ComponentName ?: return@intercept chain.proceed()
+                        val pkg = component.packageName
+                        val event = chain.args[1] as? Int ?: return@intercept chain.proceed()
+                        when (event) {
+                            1 -> onForeground(module, pkg)
+                            2 -> onBackground(module, pkg)
+                        }
+                    } catch (e: Throwable) {
+                        module.log(Log.ERROR, TAG, "ForegroundDetector error: ${e.message}")
+                    }
+                    chain.proceed()
+                }
+                module.log(Log.INFO, TAG, "ForegroundDetector: hooked (3-param signature)")
                 return
             }
 
             method.isAccessible = true
-
             module.hook(method).intercept { chain ->
                 try {
                     val component = chain.args[0] as? ComponentName ?: return@intercept chain.proceed()
                     val event = chain.args[2] as? Int ?: return@intercept chain.proceed()
                     val pkg = component.packageName
-
                     when (event) {
                         1 -> onForeground(module, pkg)
                         2 -> onBackground(module, pkg)
@@ -55,8 +101,7 @@ object ForegroundDetectorHook {
                 }
                 chain.proceed()
             }
-
-            module.log(Log.INFO, TAG, "ForegroundDetector: hooked successfully")
+            module.log(Log.INFO, TAG, "ForegroundDetector: hooked (5-param signature)")
         } catch (e: Throwable) {
             module.log(Log.ERROR, TAG, "ForegroundDetector hook failed: ${e.message}")
         }
