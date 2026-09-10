@@ -36,44 +36,8 @@ Xposed/LSPosed module untuk optimasi performa Android secara generik per-app.
 
 ## Build
 
-### Via GitHub Actions (Recommended)
-Push ke branch `main` — APK akan tersedia di tab Actions → Artifacts.
-
-**Setup Signing (opsional, untuk release signed APK):**
-
-Buka GitHub repo → Settings → Secrets and variables → Actions, lalu buat:
-
-**Secrets** (tab Secrets → New repository secret):
-| Name | Value |
-|---|---|
-| `KEYSTORE_BASE64` | Isi command: `base64 -w 0 keystore/allmight.jks` |
-| `STORE_PASSWORD` | Password keystore |
-| `KEY_ALIAS` | Alias key (default: `allmight`) |
-| `KEY_PASSWORD` | Password key |
-
-Kalau secrets belum diisi, workflow tetap jalan tapi output APK **unsigned**.
-
-### Lokal
-```bash
-git clone https://github.com/YOUR_USERNAME/AllMightGameBooster.git
-cd AllMightGameBooster
-
-# Generate keystore (pertama kali)
-keytool -genkeypair -v \
-  -keystore keystore/allmight.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 \
-  -alias allmight
-
-# Copy template & isi password
-cp keystore.properties.example keystore.properties
-# Edit keystore.properties → isi storePassword & keyPassword
-
-# Build
-./gradlew assembleRelease
-```
-
-APK debug: `app/build/outputs/apk/debug/app-debug.apk`
-APK signed: `app/build/outputs/apk/release/app-release.apk`
+Push ke branch `main` — APK akan otomatis ter-build via GitHub Actions.
+Hasilnya bisa di-download di tab **Actions** → pilih workflow run → **Artifacts**.
 
 ## Instalasi
 
