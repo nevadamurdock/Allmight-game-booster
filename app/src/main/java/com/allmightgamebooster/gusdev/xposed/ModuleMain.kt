@@ -35,6 +35,10 @@ class ModuleMain : XposedModule() {
         val pkg = param.packageName
         log(Log.INFO, TAG, "Package loaded: $pkg")
 
+        if (pkg == "android") {
+            ForegroundDetectorHook.init(this, param)
+        }
+
         applyRootHideHooks(param)
         applyBoostHooks(param)
     }
